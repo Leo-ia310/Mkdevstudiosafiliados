@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MK Dev Studio – Panel Admin</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+
+<body>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <p id="loadingMsg">Cargando...</p>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Modals -->
+
+  <!-- Modal: Crear Cliente -->
+  <div class="modal-backdrop" id="modalCrearCliente">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Registrar Cliente</h3>
+        <button class="modal-close" onclick="closeModal('modalCrearCliente')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="alertCrearCliente"></div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Nombre completo *</label>
+            <input type="text" id="cc_nombre" placeholder="Juan García" />
+          </div>
+          <div class="form-group">
+            <label>Teléfono (único) *</label>
+            <input type="text" id="cc_telefono" placeholder="+1 555 0000" />
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="cc_email" placeholder="cliente@email.com" />
+          </div>
+          <div class="form-group">
+            <label>País</label>
+            <input type="text" id="cc_pais" placeholder="México" />
+          </div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Afiliado asignado *</label>
+            <select id="cc_afiliado">
+              <option value="">Seleccionar afiliado...</option>
+            </select>
+          </div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Estado Pipeline</label>
+            <select id="cc_estado_pipeline">
+              <option value="nuevo">Nuevo</option>
+              <option value="contactado">Contactado</option>
+              <option value="cotizado">Cotizado</option>
+              <option value="negociando">Negociando</option>
+              <option value="cerrado">Cerrado</option>
+              <option value="perdido">Perdido</option>
+              <option value="en_desarrollo">En desarrollo</option>
+              <option value="entregado">Entregado</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalCrearCliente')">Cancelar</button>
+        <button class="btn btn-primary" onclick="crearCliente()">Registrar cliente</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Crear Proyecto -->
+  <div class="modal-backdrop" id="modalCrearProyecto">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Crear Proyecto</h3>
+        <button class="modal-close" onclick="closeModal('modalCrearProyecto')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="alertCrearProyecto"></div>
+        <div class="grid-2">
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Cliente *</label>
+            <select id="cp_cliente">
+              <option value="">Seleccionar cliente...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tipo de servicio *</label>
+            <input type="text" id="cp_tipo_servicio" placeholder="ej. Landing Page" />
+          </div>
+          <div class="form-group">
+            <label>Precio total *</label>
+            <input type="number" id="cp_precio_total" placeholder="0.00" min="0" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label>Estado</label>
+            <select id="cp_estado">
+              <option value="activo">Activo</option>
+              <option value="en_desarrollo">En desarrollo</option>
+              <option value="pausado">Pausado</option>
+              <option value="entregado">Entregado</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+            <div class="form-group">
+              <label>Fecha inicio</label>
+              <input type="date" id="cp_fecha_inicio" />
+            </div>
+            <div class="form-group">
+              <label>Fecha entrega estimada</label>
+              <input type="date" id="cp_fecha_entrega" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Descripción del proyecto</label>
+            <textarea id="cp_descripcion" rows="4" placeholder="Requerimientos, contexto, referencias del cliente..."
+              style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px 14px;color:var(--text-primary);outline:none;font-size:14px;font-family:inherit;resize:vertical;line-height:1.6;box-sizing:border-box;"></textarea>
+          </div>
+        </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalCrearProyecto')">Cancelar</button>
+        <button class="btn btn-primary" onclick="crearProyecto()">Crear proyecto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Registrar Pago -->
+  <div class="modal-backdrop" id="modalRegistrarPago">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Registrar Pago</h3>
+        <button class="modal-close" onclick="closeModal('modalRegistrarPago')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="alertRegistrarPago"></div>
+        <div class="form-group">
+          <label>Proyecto *</label>
+          <select id="rp_proyecto">
+            <option value="">Seleccionar proyecto...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Monto recibido *</label>
+          <input type="number" id="rp_monto" placeholder="0.00" min="0.01" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>Fecha de pago *</label>
+          <input type="date" id="rp_fecha" />
+        </div>
+        <div class="alert alert-info mt-8" style="font-size:12px;">
+          💡 Se generará automáticamente una comisión del 30% para el afiliado correspondiente.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalRegistrarPago')">Cancelar</button>
+        <button class="btn btn-primary" onclick="registrarPago()">Registrar pago</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Cambiar Estado Cliente -->
+  <div class="modal-backdrop" id="modalCambiarEstado">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Cambiar Estado Pipeline</h3>
+        <button class="modal-close" onclick="closeModal('modalCambiarEstado')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="alertCambiarEstado"></div>
+        <input type="hidden" id="ce_cliente_id" />
+        <div class="form-group">
+          <label>Cliente</label>
+          <input type="text" id="ce_cliente_nombre" readonly style="opacity:0.7;" />
+        </div>
+        <div class="form-group">
+          <label>Nuevo estado *</label>
+          <select id="ce_nuevo_estado">
+            <option value="nuevo">Nuevo</option>
+            <option value="contactado">Contactado</option>
+            <option value="cotizado">Cotizado</option>
+            <option value="negociando">Negociando</option>
+            <option value="cerrado">Cerrado</option>
+            <option value="perdido">Perdido</option>
+            <option value="en_desarrollo">En desarrollo</option>
+            <option value="entregado">Entregado</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalCambiarEstado')">Cancelar</button>
+        <button class="btn btn-primary" onclick="cambiarEstadoCliente()">Guardar cambio</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Ver Afiliados -->
+  <div class="modal-backdrop" id="modalVerAfiliado">
+    <div class="modal" style="max-width:600px;">
+      <div class="modal-header">
+        <h3>Detalle de Afiliado</h3>
+        <button class="modal-close" onclick="closeModal('modalVerAfiliado')">✕</button>
+      </div>
+      <div class="modal-body" id="modalVerAfiliadoBody">
+        <!-- Contenido dinámico -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalVerAfiliado')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Ver Proyecto (con descripcion y aprobación) -->
+  <div class="modal-backdrop" id="modalVerProyecto">
+    <div class="modal" style="max-width:600px;">
+      <div class="modal-header">
+        <h3>Detalle del Proyecto</h3>
+        <button class="modal-close" onclick="closeModal('modalVerProyecto')">✕</button>
+      </div>
+      <div class="modal-body" id="modalVerProyectoBody"></div>
+      <div class="modal-footer" id="modalVerProyectoFooter">
+        <button class="btn btn-secondary" onclick="closeModal('modalVerProyecto')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP LAYOUT -->
+  <div class="app-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="logo-mark">
+            <img class="logo" src="../public/logo.jpg" alt="Logo">
+          </div>
+          <div>
+            <div class="logo-text">MK Dev Studio</div>
+            <div class="logo-sub">Panel Administrativo</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-user">
+        <div class="avatar" id="sidebarAvatar">A</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebarNombre">Admin</div>
+          <span class="user-role role-admin">Admin</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Principal</div>
+        <div class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard">
+          <i data-lucide="layout-dashboard" class="nav-icon"></i> Dashboard
+        </div>
+        <div class="nav-item" onclick="showSection('clientes')" id="nav-clientes">
+          <i data-lucide="users" class="nav-icon"></i> Clientes
+        </div>
+        <div class="nav-item" onclick="showSection('pipeline')" id="nav-pipeline">
+          <i data-lucide="kanban" class="nav-icon"></i> Pipeline CRM
+        </div>
+
+        <div class="nav-section-title">Gestión</div>
+        <div class="nav-item" onclick="showSection('proyectos')" id="nav-proyectos">
+          <i data-lucide="folder-open" class="nav-icon"></i> Proyectos
+        </div>
+        <div class="nav-item" onclick="showSection('pagos')" id="nav-pagos">
+          <i data-lucide="credit-card" class="nav-icon"></i> Pagos
+        </div>
+        <div class="nav-item" onclick="showSection('comisiones')" id="nav-comisiones">
+          <i data-lucide="coins" class="nav-icon"></i> Comisiones
+        </div>
+
+        <div class="nav-section-title">Afiliados</div>
+        <div class="nav-item" onclick="showSection('afiliados')" id="nav-afiliados">
+          <i data-lucide="handshake" class="nav-icon"></i> Afiliados
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn btn-secondary btn-block btn-sm" onclick="cerrarSesion()">
+          <i data-lucide="log-out" style="width:14px;height:14px;"></i> Cerrar sesión
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+
+      <!-- TOPBAR -->
+      <div class="topbar">
+        <div class="topbar-title">
+          <h2 id="topbarTitle">Dashboard</h2>
+          <p id="topbarSub">Resumen general del sistema</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-primary btn-sm" onclick="openModal('modalCrearCliente')" title="Nuevo cliente">
+            <i data-lucide="user-plus" style="width:14px;height:14px;"></i> Cliente
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="openModal('modalCrearProyecto')" title="Nuevo proyecto">
+            <i data-lucide="folder-plus" style="width:14px;height:14px;"></i> Proyecto
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="openModal('modalRegistrarPago')" title="Registrar pago">
+            <i data-lucide="plus-circle" style="width:14px;height:14px;"></i> Pago
+          </button>
+          <button class="btn-icon" onclick="recargarTodo()" title="Actualizar datos"><i data-lucide="refresh-cw"
+              style="width:15px;height:15px;"></i></button>
+        </div>
+      </div>
+
+      <!-- PAGE CONTENT -->
+      <div class="page-content">
+
+        <!-- ======= DASHBOARD ======= -->
+        <div id="section-dashboard" class="section-tabs active">
+
+          <!-- Stats Grid -->
+          <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+              <div class="stat-icon"><i data-lucide="trending-up"></i></div>
+              <div class="stat-label">Ventas Totales</div>
+              <div class="stat-value" id="stat_ventas_totales">$0</div>
+              <div class="stat-sub">Suma de todos los pagos</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon"><i data-lucide="users"></i></div>
+              <div class="stat-label">Total Clientes</div>
+              <div class="stat-value" id="stat_total_clientes">0</div>
+              <div class="stat-sub">Clientes registrados</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon"><i data-lucide="folder-open"></i></div>
+              <div class="stat-label">Proyectos Activos</div>
+              <div class="stat-value" id="stat_proyectos_activos">0</div>
+              <div class="stat-sub">En curso</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon"><i data-lucide="clock"></i></div>
+              <div class="stat-label">Comisiones Pendientes</div>
+              <div class="stat-value" id="stat_comisiones_pendientes">$0</div>
+              <div class="stat-sub">Sin pagar a afiliados</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon"><i data-lucide="check-circle-2"></i></div>
+              <div class="stat-label">Comisiones Pagadas</div>
+              <div class="stat-value" id="stat_comisiones_pagadas">$0</div>
+              <div class="stat-sub">Total liquidado</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon"><i data-lucide="handshake"></i></div>
+              <div class="stat-label">Afiliados Activos</div>
+              <div class="stat-value" id="stat_afiliados_activos">0</div>
+              <div class="stat-sub">Con cuenta activa</div>
+            </div>
+          </div>
+
+          <!-- Top Afiliados + Actividad reciente -->
+          <div class="grid-2 mt-16">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title"><i data-lucide="award"
+                      style="width:15px;height:15px;display:inline;vertical-align:middle;margin-right:6px;"></i>Top
+                    Afiliados</div>
+                  <div class="card-subtitle">Por ventas generadas</div>
+                </div>
+              </div>
+              <div id="topAfiliadosContainer">
+                <div class="empty-state" style="padding:30px 0;">
+                  <div class="empty-icon"><i data-lucide="bar-chart-2"></i></div>
+                  <p>Cargando datos...</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title"><i data-lucide="list"
+                      style="width:15px;height:15px;display:inline;vertical-align:middle;margin-right:6px;"></i>Últimos
+                    Clientes</div>
+                  <div class="card-subtitle">Registros más recientes</div>
+                </div>
+              </div>
+              <div id="ultimosClientesContainer">
+                <div class="empty-state" style="padding:30px 0;">
+                  <div class="empty-icon"><i data-lucide="users"></i></div>
+                  <p>Cargando datos...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Comisiones pendientes resumen -->
+          <div class="card mt-16">
+            <div class="card-header">
+              <div>
+                <div class="card-title"><i data-lucide="coins"
+                    style="width:15px;height:15px;display:inline;vertical-align:middle;margin-right:6px;"></i>Comisiones
+                  Pendientes de Pago</div>
+                <div class="card-subtitle">Marca como pagadas cuando liquides al afiliado</div>
+              </div>
+            </div>
+            <div id="comisionesPendientesResumen">
+              <div class="empty-state" style="padding:30px 0;">
+                <div class="empty-icon"><i data-lucide="clock"></i></div>
+                <p>Cargando comisiones...</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ======= CLIENTES ======= -->
+        <div id="section-clientes" class="section-tabs">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Todos los Clientes</div>
+                <div class="card-subtitle" id="clientesCount">Cargando...</div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="openModal('modalCrearCliente')">
+                <i data-lucide="user-plus" style="width:14px;height:14px;"></i> Nuevo cliente
+              </button>
+            </div>
+            <div class="search-bar">
+              <div class="search-input-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchClientes" placeholder="Buscar por nombre, email, teléfono..."
+                  oninput="filtrarClientes()" />
+              </div>
+              <select id="filterEstadoCliente" onchange="filtrarClientes()"
+                style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:9px 14px;color:var(--text-primary);outline:none;">
+                <option value="">Todos los estados</option>
+                <option value="nuevo">Nuevo</option>
+                <option value="contactado">Contactado</option>
+                <option value="cotizado">Cotizado</option>
+                <option value="negociando">Negociando</option>
+                <option value="cerrado">Cerrado</option>
+                <option value="perdido">Perdido</option>
+                <option value="en_desarrollo">En desarrollo</option>
+                <option value="entregado">Entregado</option>
+              </select>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Teléfono</th>
+                    <th>Email</th>
+                    <th>País</th>
+                    <th>Afiliado</th>
+                    <th>Pipeline</th>
+                    <th>Registro</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaClientes">
+                  <tr>
+                    <td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">Cargando...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ======= PIPELINE CRM ======= -->
+        <div id="section-pipeline" class="section-tabs">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Pipeline CRM</div>
+                <div class="card-subtitle">Vista kanban por estado</div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="openModal('modalCrearCliente')"><i data-lucide="user-plus"
+                  style="width:14px;height:14px;"></i> Cliente</button>
+            </div>
+            <div class="pipeline-board" id="pipelineBoard">
+              <div class="empty-state" style="padding:40px 0;width:100%;">
+                <div class="empty-icon">📋</div>
+                <p>Cargando pipeline...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ======= PROYECTOS ======= -->
+        <div id="section-proyectos" class="section-tabs">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Proyectos</div>
+                <div class="card-subtitle" id="proyectosCount">Cargando...</div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="openModal('modalCrearProyecto')"><i
+                  data-lucide="folder-plus" style="width:14px;height:14px;"></i> Nuevo proyecto</button>
+            </div>
+            <div class="search-bar">
+              <div class="search-input-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchProyectos" placeholder="Buscar proyecto..." oninput="filtrarProyectos()" />
+              </div>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Cliente</th>
+                      <th>Afiliado</th>
+                      <th>Servicio</th>
+                      <th>Precio</th>
+                      <th>Estado</th>
+                      <th>Descripción</th>
+                      <th>Inicio</th>
+                      <th>Entrega</th>
+                      <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaProyectos">
+                  <tr>
+                    <td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted);">Cargando...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ======= PAGOS ======= -->
+        <div id="section-pagos" class="section-tabs">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Registro de Pagos</div>
+                <div class="card-subtitle" id="pagosCount">Cargando...</div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="openModal('modalRegistrarPago')"><i
+                  data-lucide="plus-circle" style="width:14px;height:14px;"></i> Registrar pago</button>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Proyecto</th>
+                    <th>Cliente</th>
+                    <th>Afiliado</th>
+                    <th>Monto</th>
+                    <th>Fecha</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaPagos">
+                  <tr>
+                    <td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">Cargando...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ======= COMISIONES ======= -->
+        <div id="section-comisiones" class="section-tabs">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Comisiones</div>
+                <div class="card-subtitle" id="comisionesCount">Cargando...</div>
+              </div>
+            </div>
+            <div class="search-bar">
+              <select id="filterEstadoComision" onchange="filtrarComisiones()"
+                style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:9px 14px;color:var(--text-primary);outline:none;">
+                <option value="">Todos los estados</option>
+                <option value="pendiente">Pendiente</option>
+                <option value="pagada">Pagada</option>
+              </select>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Afiliado</th>
+                    <th>Proyecto</th>
+                    <th>Monto Pagado</th>
+                    <th>% Comisión</th>
+                    <th>Comisión</th>
+                    <th>Estado</th>
+                    <th>Generada</th>
+                    <th>Pagada</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaComisiones">
+                  <tr>
+                    <td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted);">Cargando...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ======= AFILIADOS ======= -->
+        <div id="section-afiliados" class="section-tabs">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Afiliados</div>
+                <div class="card-subtitle" id="afiliadosCount">Cargando...</div>
+              </div>
+              <div class="flex gap-8 items-center">
+                <span class="text-sm text-muted">Los afiliados se crean directamente en Google Sheets</span>
+              </div>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Teléfono</th>
+                    <th>País</th>
+                    <th>% Comisión</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>Registro</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaAfiliados">
+                  <tr>
+                    <td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted);">Cargando...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /page-content -->
+    </div><!-- /main-content -->
+  </div><!-- /app-layout -->
+
+  <script>
+    // ============================================================
+    //  CONFIG
+    // ============================================================
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbztEzTUHzTRdQIVApVUxpAiBmbzcYagAjrOA95DoRcALuoWe091P8lpOtCnZZZvC3Uk_g/exec';
+
+    // ============================================================
+    //  STATE
+    // ============================================================
+    let ALL_CLIENTES = [];
+    let ALL_PROYECTOS = [];
+    let ALL_PAGOS = [];
+    let ALL_COMISIONES = [];
+    let ALL_AFILIADOS = [];
+    let currentSection = 'dashboard';
+
+    // ============================================================
+    //  SESSION
+    // ============================================================
+    const SESSION = (function () {
+      try { return JSON.parse(localStorage.getItem('mk_session')); } catch { return null; }
+    })();
+
+    if (!SESSION || SESSION.user_rol !== 'admin') {
+      window.location.href = 'index.html';
+    }
+
+    // Set sidebar user info
+    document.getElementById('sidebarNombre').textContent = SESSION.user_nombre || 'Admin';
+    document.getElementById('sidebarAvatar').textContent = (SESSION.user_nombre || 'A')[0].toUpperCase();
+
+    function cerrarSesion() {
+      localStorage.removeItem('mk_session');
+      window.location.href = 'index.html';
+    }
+
+    // ============================================================
+    //  TOAST / LOADING
+    // ============================================================
+    function showToast(type, title, msg, duration = 4000) {
+      const container = document.getElementById('toastContainer');
+      const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.innerHTML = `
+    <span class="toast-icon">${icons[type] || 'ℹ️'}</span>
+    <div class="toast-body">
+      <div class="toast-title">${title}</div>
+      ${msg ? `<div class="toast-msg">${msg}</div>` : ''}
+    </div>
+    <span class="toast-close" onclick="removeToast(this.parentElement)">✕</span>
+  `;
+      container.appendChild(toast);
+      if (duration > 0) setTimeout(() => removeToast(toast), duration);
+    }
+
+    function removeToast(el) {
+      if (!el || !el.parentElement) return;
+      el.classList.add('removing');
+      setTimeout(() => el.remove(), 300);
+    }
+
+    function setLoading(show, msg = 'Cargando...') {
+      document.getElementById('loadingMsg').textContent = msg;
+      document.getElementById('loadingOverlay').classList.toggle('show', show);
+    }
+
+    function showModalAlert(containerId, type, msg) {
+      document.getElementById(containerId).innerHTML = `
+    <div class="alert alert-${type}">${msg}</div>
+  `;
+    }
+
+    // ============================================================
+    //  API CALLS
+    // ============================================================
+    async function apiCall(params) {
+      const url = `${APPS_SCRIPT_URL}?${new URLSearchParams(params).toString()}`;
+      const res = await fetch(url);
+      return res.json();
+    }
+
+    async function apiPost(action, body) {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        // IMPORTANT: 'text/plain' evita el preflight CORS que Google Apps Script no soporta.
+        // GAS puede leer el JSON igual con JSON.parse(e.postData.contents)
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action, ...body })
+      });
+      return res.json();
+    }
+
+    // ============================================================
+    //  NAVIGATION
+    // ============================================================
+    const SECTION_META = {
+      dashboard: { title: 'Dashboard', sub: 'Resumen general del sistema' },
+      clientes: { title: 'Clientes', sub: 'Gestión de clientes' },
+      pipeline: { title: 'Pipeline CRM', sub: 'Vista kanban del embudo de ventas' },
+      proyectos: { title: 'Proyectos', sub: 'Gestión de proyectos' },
+      pagos: { title: 'Pagos', sub: 'Historial de pagos recibidos' },
+      comisiones: { title: 'Comisiones', sub: 'Comisiones de afiliados' },
+      afiliados: { title: 'Afiliados', sub: 'Gestión de afiliados' }
+    };
+
+    function showSection(name) {
+      document.querySelectorAll('.section-tabs').forEach(s => s.classList.remove('active'));
+      document.getElementById(`section-${name}`).classList.add('active');
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById(`nav-${name}`).classList.add('active');
+      const meta = SECTION_META[name] || {};
+      document.getElementById('topbarTitle').textContent = meta.title || name;
+      document.getElementById('topbarSub').textContent = meta.sub || '';
+      currentSection = name;
+
+      // Load section data on demand
+      if (name === 'clientes') renderTablaClientes();
+      if (name === 'pipeline') renderPipeline();
+      if (name === 'proyectos') renderTablaProyectos();
+      if (name === 'pagos') renderTablaPagos();
+      if (name === 'comisiones') renderTablaComisiones();
+      if (name === 'afiliados') renderTablaAfiliados();
+    }
+
+    // ============================================================
+    //  LOAD ALL DATA
+    // ============================================================
+    async function cargarTodo() {
+      setLoading(true, 'Cargando datos...');
+      try {
+        const [resAfiliados, resClientes, resProyectos, resPagos, resComisiones] = await Promise.all([
+          apiCall({ action: 'getAfiliados' }),
+          apiCall({ action: 'getClientes' }),
+          apiCall({ action: 'getProyectos' }),
+          apiCall({ action: 'getPagos' }),
+          apiCall({ action: 'getComisiones' })
+        ]);
+
+        ALL_AFILIADOS = resAfiliados.data || [];
+        ALL_CLIENTES = resClientes.data || [];
+        ALL_PROYECTOS = resProyectos.data || [];
+        ALL_PAGOS = resPagos.data || [];
+        ALL_COMISIONES = resComisiones.data || [];
+
+        renderDashboard();
+        poblarSelectAfiliados();
+        poblarSelectClientes();
+        poblarSelectProyectos();
+
+      } catch (err) {
+        console.error(err);
+        showToast('error', 'Error de conexión', 'No se pudo cargar los datos. Verifica la URL del script.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function recargarTodo() { cargarTodo(); }
+
+    // ============================================================
+    //  SELECTS (Poblar dropdowns en modales)
+    // ============================================================
+    function poblarSelectAfiliados() {
+      const sel = document.getElementById('cc_afiliado');
+      const afs = ALL_AFILIADOS.filter(a => a.rol === 'afiliado' && a.estado === 'activo');
+      sel.innerHTML = '<option value="">Seleccionar afiliado...</option>';
+      afs.forEach(a => {
+        sel.innerHTML += `<option value="${a.id}">${a.nombre}</option>`;
+      });
+    }
+
+    function poblarSelectClientes() {
+      const sel = document.getElementById('cp_cliente');
+      sel.innerHTML = '<option value="">Seleccionar cliente...</option>';
+      ALL_CLIENTES.forEach(c => {
+        sel.innerHTML += `<option value="${c.id}">${c.nombre}</option>`;
+      });
+    }
+
+    function poblarSelectProyectos() {
+      const sel = document.getElementById('rp_proyecto');
+      sel.innerHTML = '<option value="">Seleccionar proyecto...</option>';
+      ALL_PROYECTOS.forEach(p => {
+        const cliente = ALL_CLIENTES.find(c => c.id === p.cliente_id);
+        const nombreCliente = cliente ? cliente.nombre : p.cliente_id;
+        sel.innerHTML += `<option value="${p.id}">[${p.id}] ${p.tipo_servicio} – ${nombreCliente}</option>`;
+      });
+    }
+
+    // ============================================================
+    //  DASHBOARD RENDER
+    // ============================================================
+    function renderDashboard() {
+      // Stats
+      const totalPagos = ALL_PAGOS.reduce((s, p) => s + parseFloat(p.monto || 0), 0);
+      const comisionesPend = ALL_COMISIONES.filter(c => c.estado === 'pendiente').reduce((s, c) => s + parseFloat(c.monto_comision || 0), 0);
+      const comisionesPagadas = ALL_COMISIONES.filter(c => c.estado === 'pagada').reduce((s, c) => s + parseFloat(c.monto_comision || 0), 0);
+      const proyActivosCount = ALL_PROYECTOS.filter(p => ['activo', 'en_desarrollo'].includes(p.estado)).length;
+      const afilActivos = ALL_AFILIADOS.filter(a => a.rol === 'afiliado' && a.estado === 'activo').length;
+
+      document.getElementById('stat_ventas_totales').textContent = formatMoney(totalPagos);
+      document.getElementById('stat_total_clientes').textContent = ALL_CLIENTES.length;
+      document.getElementById('stat_proyectos_activos').textContent = proyActivosCount;
+      document.getElementById('stat_comisiones_pendientes').textContent = formatMoney(comisionesPend);
+      document.getElementById('stat_comisiones_pagadas').textContent = formatMoney(comisionesPagadas);
+      document.getElementById('stat_afiliados_activos').textContent = afilActivos;
+
+      // Top afiliados
+      renderTopAfiliados();
+
+      // Ultimos clientes
+      renderUltimosClientes();
+
+      // Comisiones pendientes resumen
+      renderComisionesPendientesResumen();
+    }
+
+    function renderTopAfiliados() {
+      const container = document.getElementById('topAfiliadosContainer');
+      const afs = ALL_AFILIADOS.filter(a => a.rol === 'afiliado');
+
+      if (afs.length === 0) {
+        container.innerHTML = `<div class="empty-state" style="padding:20px 0;"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></div><p>Sin afiliados aún</p></div>`;
+        return;
+      }
+
+      // Calcular ventas por afiliado
+      const stats = afs.map(af => {
+        const pagosAfiliado = ALL_PAGOS.filter(p => {
+          const proy = ALL_PROYECTOS.find(pr => pr.id === p.proyecto_id);
+          return proy && proy.afiliado_id === af.id;
+        });
+        const totalVentas = pagosAfiliado.reduce((s, p) => s + parseFloat(p.monto || 0), 0);
+        const comision = ALL_COMISIONES.filter(c => c.afiliado_id === af.id).reduce((s, c) => s + parseFloat(c.monto_comision || 0), 0);
+        return { ...af, totalVentas, comision };
+      }).sort((a, b) => b.totalVentas - a.totalVentas).slice(0, 5);
+
+      const maxVentas = Math.max(...stats.map(s => s.totalVentas), 1);
+
+      container.innerHTML = stats.map((s, i) => `
+    <div style="padding:10px 0;border-bottom:1px solid var(--border-subtle);">
+      <div class="flex justify-between items-center mb-4">
+        <div class="flex items-center gap-8">
+          <div style="width:24px;height:24px;background:var(--gradient-main);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">${i + 1}</div>
+          <span class="fw-600">${s.nombre}</span>
+        </div>
+        <span class="fw-700 text-accent">${formatMoney(s.totalVentas)}</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:${(s.totalVentas / maxVentas * 100).toFixed(1)}%"></div>
+      </div>
+      <div class="flex justify-between mt-4">
+        <span class="text-sm text-muted">${ALL_CLIENTES.filter(c => c.afiliado_id === s.id).length} clientes</span>
+        <span class="text-sm text-muted">Comisión: ${formatMoney(s.comision)}</span>
+      </div>
+    </div>
+  `).join('');
+    }
+
+    function renderUltimosClientes() {
+      const container = document.getElementById('ultimosClientesContainer');
+      const sorted = [...ALL_CLIENTES].sort((a, b) => new Date(b.fecha_registro) - new Date(a.fecha_registro)).slice(0, 6);
+
+      if (sorted.length === 0) {
+        container.innerHTML = `<div class="empty-state" style="padding:20px 0;"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div><p>Sin clientes aún</p></div>`;
+        return;
+      }
+
+      container.innerHTML = sorted.map(c => {
+        const af = ALL_AFILIADOS.find(a => a.id === c.afiliado_id);
+        return `
+      <div style="padding:10px 0;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div>
+          <div class="fw-600" style="font-size:13px;">${c.nombre}</div>
+          <div class="text-sm text-muted">${af ? af.nombre : c.afiliado_id}</div>
+        </div>
+        <span class="badge badge-${c.estado_pipeline}">${c.estado_pipeline}</span>
+      </div>
+    `;
+      }).join('');
+    }
+
+    function renderComisionesPendientesResumen() {
+      const container = document.getElementById('comisionesPendientesResumen');
+      const pendientes = ALL_COMISIONES.filter(c => c.estado === 'pendiente');
+
+      if (pendientes.length === 0) {
+        container.innerHTML = `<div class="empty-state" style="padding:30px 0;"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div><p>No hay comisiones pendientes</p></div>`;
+        return;
+      }
+
+      container.innerHTML = `
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Afiliado</th><th>Proyecto</th><th>Monto Pago</th><th>Comisión (30%)</th><th>Fecha</th><th>Acción</th></tr></thead>
+        <tbody>
+          ${pendientes.map(c => {
+        const af = ALL_AFILIADOS.find(a => a.id === c.afiliado_id);
+        const proy = ALL_PROYECTOS.find(p => p.id === c.proyecto_id);
+        return `
+              <tr>
+                <td class="fw-600">${af ? af.nombre : c.afiliado_id}</td>
+                <td>${proy ? proy.tipo_servicio : c.proyecto_id}</td>
+                <td>${formatMoney(c.monto_pagado)}</td>
+                <td class="fw-700 text-accent">${formatMoney(c.monto_comision)}</td>
+                <td>${formatDate(c.fecha_generada)}</td>
+                <td>
+                  <button class="btn btn-success btn-sm" onclick="pagarComision('${c.id}', '${af ? af.nombre : ''}', ${c.monto_comision})">
+                    ✓ Marcar pagada
+                  </button>
+                </td>
+              </tr>
+            `;
+      }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+    }
+
+    // ============================================================
+    //  CLIENTES TABLE
+    // ============================================================
+    let clientesFiltrados = [];
+
+    function renderTablaClientes() {
+      clientesFiltrados = [...ALL_CLIENTES];
+      filtrarClientes();
+      document.getElementById('clientesCount').textContent = `${ALL_CLIENTES.length} clientes registrados`;
+    }
+
+    function filtrarClientes() {
+      const search = (document.getElementById('searchClientes').value || '').toLowerCase();
+      const estado = document.getElementById('filterEstadoCliente').value;
+
+      clientesFiltrados = ALL_CLIENTES.filter(c => {
+        const matchSearch = !search || [c.nombre, c.email, c.telefono, c.pais].some(f => (f || '').toLowerCase().includes(search));
+        const matchEstado = !estado || c.estado_pipeline === estado;
+        return matchSearch && matchEstado;
+      });
+
+      const tbody = document.getElementById('tablaClientes');
+
+      if (clientesFiltrados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state" style="padding:30px 0;"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div><p>No se encontraron clientes</p></div></td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = clientesFiltrados.map(c => {
+        const af = ALL_AFILIADOS.find(a => a.id === c.afiliado_id);
+        return `
+      <tr>
+        <td class="fw-600">${c.nombre}</td>
+        <td>${c.telefono}</td>
+        <td>${c.email || '–'}</td>
+        <td>${c.pais || '–'}</td>
+        <td>${af ? af.nombre : (c.afiliado_id || '–')}</td>
+        <td><span class="badge badge-${c.estado_pipeline}">${c.estado_pipeline}</span></td>
+        <td>${formatDate(c.fecha_registro)}</td>
+        <td>
+          <div class="table-actions">
+            <button class="btn btn-secondary btn-sm" onclick="abrirCambiarEstado('${c.id}', '${escapeHtml(c.nombre)}', '${c.estado_pipeline}')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              Estado
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+      }).join('');
+    }
+
+    // ============================================================
+    //  PIPELINE KANBAN
+    // ============================================================
+    const PIPELINE_STAGES = [
+      { key: 'nuevo', label: 'Nuevo', color: 'var(--info)' },
+      { key: 'contactado', label: 'Contactado', color: 'var(--warning)' },
+      { key: 'cotizado', label: 'Cotizado', color: 'var(--accent-light)' },
+      { key: 'negociando', label: 'Negociando', color: '#FFD580' },
+      { key: 'cerrado', label: 'Cerrado', color: 'var(--success)' },
+      { key: 'en_desarrollo', label: 'En Desarrollo', color: '#80D4FF' },
+      { key: 'entregado', label: 'Entregado', color: '#80FFB8' },
+      { key: 'perdido', label: 'Perdido', color: 'var(--danger)' }
+    ];
+
+    function renderPipeline() {
+      const board = document.getElementById('pipelineBoard');
+      if (ALL_CLIENTES.length === 0) {
+        board.innerHTML = `<div class="empty-state" style="width:100%;padding:40px 0;"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg></div><h4>Sin clientes</h4><p>Registra clientes para ver el pipeline</p></div>`;
+        return;
+      }
+
+      board.innerHTML = PIPELINE_STAGES.map(stage => {
+        const clientes = ALL_CLIENTES.filter(c => c.estado_pipeline === stage.key);
+        return `
+      <div class="pipeline-col">
+        <div class="pipeline-col-header" style="background:rgba(255,255,255,0.03);color:${stage.color};">
+          ${stage.label} <span style="opacity:0.7;font-weight:400;">(${clientes.length})</span>
+        </div>
+        ${clientes.length === 0
+            ? `<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:12px;">Sin clientes</div>`
+            : clientes.map(c => {
+              const af = ALL_AFILIADOS.find(a => a.id === c.afiliado_id);
+              return `
+                <div class="pipeline-card" onclick="abrirCambiarEstado('${c.id}', '${escapeHtml(c.nombre)}', '${c.estado_pipeline}')">
+                  <div class="client-name">${c.nombre}</div>
+                  <div class="client-meta"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:3px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.63 3.18 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg> ${c.telefono || '–'}</div>
+                  ${af ? `<div class="client-meta"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:3px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> ${af.nombre}</div>` : ''}
+                </div>
+              `;
+            }).join('')
+          }
+      </div>
+    `;
+      }).join('');
+    }
+
+    // ============================================================
+    //  PROYECTOS TABLE
+    // ============================================================
+    function renderTablaProyectos() {
+      document.getElementById('proyectosCount').textContent = `${ALL_PROYECTOS.length} proyectos`;
+      filtrarProyectos();
+    }
+
+    function filtrarProyectos() {
+      const search = (document.getElementById('searchProyectos').value || '').toLowerCase();
+      let filtered = ALL_PROYECTOS;
+      if (search) {
+        filtered = filtered.filter(p => {
+          const cl = ALL_CLIENTES.find(c => c.id === p.cliente_id);
+          return [p.tipo_servicio, p.estado, cl ? cl.nombre : ''].some(f => (f || '').toLowerCase().includes(search));
+        });
+      }
+
+      const tbody = document.getElementById('tablaProyectos');
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state" style="padding:30px 0;"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></div><p>No hay proyectos</p></div></td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(p => {
+        const cl = ALL_CLIENTES.find(c => c.id === p.cliente_id);
+        const af = ALL_AFILIADOS.find(a => a.id === p.afiliado_id);
+        const isPendiente = p.estado === 'pendiente';
+        const estadoBadge = isPendiente
+          ? `<span class="badge" style="background:rgba(255,193,7,0.15);color:#FFD580;border:1px solid rgba(255,193,7,0.2);">⏳ Pendiente</span>`
+          : (p.estado ? `<span class="badge badge-${p.estado}">${p.estado}</span>` : '–');
+        const desc = p.descripcion || '';
+        const descCorta = desc.length > 40 ? desc.substring(0, 40) + '...' : desc;
+        return `
+      <tr style="${isPendiente ? 'background:rgba(255,193,7,0.04);' : ''}">
+        <td class="text-muted">${p.id}</td>
+        <td class="fw-600">${cl ? cl.nombre : p.cliente_id}</td>
+        <td>${af ? af.nombre : (p.afiliado_id || '–')}</td>
+        <td>${p.tipo_servicio}</td>
+        <td class="fw-700 text-accent">${formatMoney(p.precio_total)}</td>
+        <td>${estadoBadge}</td>
+        <td style="max-width:160px;">
+          ${desc ? `<span title="${escapeHtml(desc)}" style="cursor:help;font-size:12px;color:var(--text-muted);">${escapeHtml(descCorta)}</span>` : '<span class="text-muted">–</span>'}
+        </td>
+        <td>${formatDate(p.fecha_inicio)}</td>
+        <td>${formatDate(p.fecha_entrega)}</td>
+        <td>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            ${isPendiente ? `<button class="btn btn-success btn-sm" onclick="aprobarProyecto('${p.id}', '${escapeHtml(p.tipo_servicio)}')">✓ Aprobar</button>` : ''}
+            <button class="btn btn-secondary btn-sm" onclick="verProyecto('${p.id}')">👁 Ver</button>
+            ${!isPendiente ? `<button class="btn btn-primary btn-sm" onclick="abrirRegistrarPagoConProyecto('${p.id}')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+              Pago
+            </button>` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+      }).join('');
+    }
+
+    // ============================================================
+    //  PAGOS TABLE
+    // ============================================================
+    function renderTablaPagos() {
+      document.getElementById('pagosCount').textContent = `${ALL_PAGOS.length} pagos registrados`;
+      const tbody = document.getElementById('tablaPagos');
+
+      if (ALL_PAGOS.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state" style="padding:30px 0;"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg></div><p>Sin pagos registrados</p></div></td></tr>`;
+        return;
+      }
+
+      const sorted = [...ALL_PAGOS].sort((a, b) => new Date(b.fecha_pago) - new Date(a.fecha_pago));
+
+      tbody.innerHTML = sorted.map(p => {
+        const proy = ALL_PROYECTOS.find(pr => pr.id === p.proyecto_id);
+        const cl = proy ? ALL_CLIENTES.find(c => c.id === proy.cliente_id) : null;
+        const af = proy ? ALL_AFILIADOS.find(a => a.id === proy.afiliado_id) : null;
+        return `
+      <tr>
+        <td class="text-muted">${p.id}</td>
+        <td>${proy ? proy.tipo_servicio : p.proyecto_id}</td>
+        <td class="fw-600">${cl ? cl.nombre : '–'}</td>
+        <td>${af ? af.nombre : '–'}</td>
+        <td class="fw-700 text-accent">${formatMoney(p.monto)}</td>
+        <td>${formatDate(p.fecha_pago)}</td>
+      </tr>
+    `;
+      }).join('');
+    }
+
+    // ============================================================
+    //  COMISIONES TABLE
+    // ============================================================
+    function renderTablaComisiones() {
+      document.getElementById('comisionesCount').textContent = `${ALL_COMISIONES.length} comisiones generadas`;
+      filtrarComisiones();
+    }
+
+    function filtrarComisiones() {
+      const estado = document.getElementById('filterEstadoComision').value;
+      let filtered = ALL_COMISIONES;
+      if (estado) filtered = filtered.filter(c => c.estado === estado);
+
+      const tbody = document.getElementById('tablaComisiones');
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state" style="padding:30px 0;"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="2"></circle><circle cx="20" cy="21" r="2"></circle><path d="M5.67 6H23l-1.68 8.39a2 2 0 0 1-2 1.61H8.75a2 2 0 0 1-2-1.74L5.23 2.74A.94.94 0 0 0 4.3 2H2"></path></svg></div><p>No hay comisiones</p></div></td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(c => {
+        const af = ALL_AFILIADOS.find(a => a.id === c.afiliado_id);
+        const proy = ALL_PROYECTOS.find(p => p.id === c.proyecto_id);
+        const estadoBadge = `<span class="badge badge-${c.estado}">${c.estado}</span>`;
+        return `
+      <tr>
+        <td class="text-muted">${c.id}</td>
+        <td class="fw-600">${af ? af.nombre : c.afiliado_id}</td>
+        <td>${proy ? proy.tipo_servicio : c.proyecto_id}</td>
+        <td>${formatMoney(c.monto_pagado)}</td>
+        <td>${c.porcentaje || 30}%</td>
+        <td class="fw-700 text-accent">${formatMoney(c.monto_comision)}</td>
+        <td>${estadoBadge}</td>
+        <td>${formatDate(c.fecha_generada)}</td>
+        <td>${c.fecha_pagada ? formatDate(c.fecha_pagada) : '–'}</td>
+        <td>
+          ${c.estado === 'pendiente'
+            ? `<button class="btn btn-success btn-sm" onclick="pagarComision('${c.id}', '${af ? escapeHtml(af.nombre) : ''}', ${c.monto_comision})">✓ Pagar</button>`
+            : `<span class="text-sm text-muted">Liquidada</span>`
+          }
+        </td>
+      </tr>
+    `;
+      }).join('');
+    }
+
+    // ============================================================
+    //  AFILIADOS TABLE
+    // ============================================================
+    function renderTablaAfiliados() {
+      document.getElementById('afiliadosCount').textContent = `${ALL_AFILIADOS.filter(a => a.rol === 'afiliado').length} afiliados`;
+      const tbody = document.getElementById('tablaAfiliados');
+
+      const afs = ALL_AFILIADOS.filter(a => a.rol === 'afiliado');
+
+      if (afs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state" style="padding:30px 0;"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div><p>Sin afiliados registrados</p><p class="text-sm">Agrega afiliados directamente en Google Sheets</p></div></td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = afs.map(a => {
+        const clientesCount = ALL_CLIENTES.filter(c => c.afiliado_id === a.id).length;
+        const comisionTotal = ALL_COMISIONES.filter(c => c.afiliado_id === a.id).reduce((s, c) => s + parseFloat(c.monto_comision || 0), 0);
+        const estadoBadge = `<span class="badge badge-${a.estado}">${a.estado}</span>`;
+        return `
+      <tr>
+        <td class="text-muted">${a.id}</td>
+        <td class="fw-600">${a.nombre}</td>
+        <td>${a.email}</td>
+        <td>${a.telefono || '–'}</td>
+        <td>${a.pais || '–'}</td>
+        <td>${a.porcentaje || 30}%</td>
+        <td><span class="badge badge-${a.rol}">${a.rol}</span></td>
+        <td>${estadoBadge}</td>
+        <td>${formatDate(a.fecha_registro)}</td>
+        <td>
+          <button class="btn btn-secondary btn-sm" onclick="verDetalleAfiliado('${a.id}')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            Ver detalle
+          </button>
+        </td>
+      </tr>
+    `;
+      }).join('');
+    }
+
+    // ============================================================
+    //  ACTIONS
+    // ============================================================
+
+    // --- Crear Cliente ---
+    async function crearCliente() {
+      const nombre = document.getElementById('cc_nombre').value.trim();
+      const telefono = document.getElementById('cc_telefono').value.trim();
+      const email = document.getElementById('cc_email').value.trim();
+      const pais = document.getElementById('cc_pais').value.trim();
+      const afiliado = document.getElementById('cc_afiliado').value;
+      const estado = document.getElementById('cc_estado_pipeline').value;
+
+      if (!nombre || !telefono || !afiliado) {
+        showModalAlert('alertCrearCliente', 'error', 'Nombre, teléfono y afiliado son requeridos.');
+        return;
+      }
+
+      setLoading(true, 'Registrando cliente...');
+      try {
+        const res = await apiPost('crearCliente', { nombre, telefono, email, pais, afiliado_id: afiliado, estado_pipeline: estado });
+        if (res.success) {
+          showToast('success', 'Cliente registrado', res.message || `${nombre} fue agregado correctamente.`);
+          closeModal('modalCrearCliente');
+          limpiarFormCrearCliente();
+          await cargarTodo();
+        } else {
+          showModalAlert('alertCrearCliente', 'error', res.message || 'Error al crear cliente.');
+        }
+      } catch (err) {
+        showModalAlert('alertCrearCliente', 'error', 'Error de conexión.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function limpiarFormCrearCliente() {
+      ['cc_nombre', 'cc_telefono', 'cc_email', 'cc_pais'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('cc_afiliado').value = '';
+      document.getElementById('cc_estado_pipeline').value = 'nuevo';
+      document.getElementById('alertCrearCliente').innerHTML = '';
+    }
+
+    // --- Crear Proyecto ---
+    async function crearProyecto() {
+      const cliente_id = document.getElementById('cp_cliente').value;
+      const tipo_servicio = document.getElementById('cp_tipo_servicio').value.trim();
+      const precio_total = document.getElementById('cp_precio_total').value;
+      const estado = document.getElementById('cp_estado').value;
+      const fecha_inicio = document.getElementById('cp_fecha_inicio').value;
+      const fecha_entrega = document.getElementById('cp_fecha_entrega').value;
+
+      if (!cliente_id || !tipo_servicio || !precio_total) {
+        showModalAlert('alertCrearProyecto', 'error', 'Cliente, tipo de servicio y precio son requeridos.');
+        return;
+      }
+
+      const cliente = ALL_CLIENTES.find(c => c.id === cliente_id);
+      const afiliado_id = cliente ? cliente.afiliado_id : '';
+
+      setLoading(true, 'Creando proyecto...');
+      try {
+        const res = await apiPost('crearProyecto', {
+          cliente_id, afiliado_id, tipo_servicio,
+          precio_total: parseFloat(precio_total),
+          estado,
+          fecha_inicio,
+          fecha_entrega,
+          descripcion: (document.getElementById('cp_descripcion').value || '').trim()
+        });
+        if (res.success) {
+          showToast('success', 'Proyecto creado', res.message || 'Proyecto agregado correctamente.');
+          closeModal('modalCrearProyecto');
+          limpiarFormCrearProyecto();
+          await cargarTodo();
+        } else {
+          showModalAlert('alertCrearProyecto', 'error', res.message || 'Error al crear proyecto.');
+        }
+      } catch (err) {
+        showModalAlert('alertCrearProyecto', 'error', 'Error de conexión.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+      function limpiarFormCrearProyecto() {
+        ['cp_tipo_servicio', 'cp_precio_total', 'cp_fecha_inicio', 'cp_fecha_entrega', 'cp_descripcion'].forEach(id => {
+          const el = document.getElementById(id); if (el) el.value = '';
+        });
+        document.getElementById('cp_cliente').value = '';
+        document.getElementById('cp_estado').value = 'activo';
+        document.getElementById('alertCrearProyecto').innerHTML = '';
+      }
+
+      // --- Ver Proyecto (descripcion completa) ---
+      function verProyecto(proyectoId) {
+        const p = ALL_PROYECTOS.find(x => x.id === proyectoId);
+        if (!p) return;
+        const cl = ALL_CLIENTES.find(c => c.id === p.cliente_id);
+        const af = ALL_AFILIADOS.find(a => a.id === p.afiliado_id);
+        const isPendiente = p.estado === 'pendiente';
+
+        document.getElementById('modalVerProyectoBody').innerHTML = `
+          <div class="grid-2 mb-16">
+            <div><div class="text-sm text-muted">Cliente</div><div class="fw-600 mt-4">${cl ? cl.nombre : p.cliente_id}</div></div>
+            <div><div class="text-sm text-muted">Afiliado</div><div class="fw-600 mt-4">${af ? af.nombre : (p.afiliado_id || '–')}</div></div>
+            <div><div class="text-sm text-muted">Servicio</div><div class="fw-600 mt-4">${p.tipo_servicio}</div></div>
+            <div><div class="text-sm text-muted">Precio</div><div class="fw-700 text-accent mt-4">${formatMoney(p.precio_total)}</div></div>
+            <div><div class="text-sm text-muted">Estado</div><div class="mt-4">
+              ${isPendiente
+                ? '<span class="badge" style="background:rgba(255,193,7,0.15);color:#FFD580;border:1px solid rgba(255,193,7,0.2);">⏳ Pendiente aprobación</span>'
+                : `<span class="badge badge-${p.estado}">${p.estado}</span>`}
+            </div></div>
+            <div><div class="text-sm text-muted">Fecha inicio</div><div class="fw-600 mt-4">${formatDate(p.fecha_inicio)}</div></div>
+            <div><div class="text-sm text-muted">Fecha entrega</div><div class="fw-600 mt-4">${formatDate(p.fecha_entrega)}</div></div>
+          </div>
+          ${p.descripcion ? `
+            <div style="margin-top:8px;">
+              <div class="text-sm text-muted mb-8" style="font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Descripción del Afiliado</div>
+              <div style="background:rgba(123,63,228,0.07);border:1px solid rgba(123,63,228,0.2);border-radius:10px;padding:16px;font-size:14px;line-height:1.7;white-space:pre-wrap;">${escapeHtml(p.descripcion)}</div>
+            </div>
+          ` : '<p class="text-muted text-sm">Sin descripción.</p>'}
+        `;
+
+        const footer = document.getElementById('modalVerProyectoFooter');
+        footer.innerHTML = `<button class="btn btn-secondary" onclick="closeModal('modalVerProyecto')">Cerrar</button>`;
+        if (isPendiente) {
+          footer.innerHTML += `<button class="btn btn-success" onclick="aprobarProyecto('${p.id}', '${escapeHtml(p.tipo_servicio)}'); closeModal('modalVerProyecto');">✓ Aprobar proyecto</button>`;
+        }
+
+        openModal('modalVerProyecto');
+      }
+
+      // --- Aprobar Proyecto (pendiente → activo) ---
+      async function aprobarProyecto(proyectoId, tipoServicio) {
+        if (!confirm(`¿Aprobar el proyecto "${tipoServicio}"? Cambiará a estado "activo".`)) return;
+
+        setLoading(true, 'Aprobando proyecto...');
+        try {
+          const res = await apiPost('cambiarEstadoProyecto', {
+            proyecto_id: proyectoId,
+            nuevo_estado: 'activo'
+          });
+          if (res.success) {
+            showToast('success', 'Proyecto aprobado', `"${tipoServicio}" ahora está activo.`);
+            await cargarTodo();
+          } else {
+            showToast('error', 'Error', res.message || 'No se pudo aprobar el proyecto.');
+          }
+        } catch (err) {
+          showToast('error', 'Error de conexión', 'Inténtalo de nuevo.');
+        } finally {
+          setLoading(false);
+        }
+      }
+
+    // --- Registrar Pago ---
+    async function registrarPago() {
+      const proyecto_id = document.getElementById('rp_proyecto').value;
+      const monto = document.getElementById('rp_monto').value;
+      const fecha_pago = document.getElementById('rp_fecha').value;
+
+      if (!proyecto_id || !monto || !fecha_pago) {
+        showModalAlert('alertRegistrarPago', 'error', 'Todos los campos son requeridos.');
+        return;
+      }
+
+      if (parseFloat(monto) <= 0) {
+        showModalAlert('alertRegistrarPago', 'error', 'El monto debe ser mayor a 0.');
+        return;
+      }
+
+      setLoading(true, 'Registrando pago...');
+      try {
+        const res = await apiPost('registrarPago', { proyecto_id, monto: parseFloat(monto), fecha_pago });
+        if (res.success) {
+          showToast('success', 'Pago registrado', `Monto: ${formatMoney(monto)}. Comisión generada automáticamente.`);
+          closeModal('modalRegistrarPago');
+          limpiarFormRegistrarPago();
+          await cargarTodo();
+        } else {
+          showModalAlert('alertRegistrarPago', 'error', res.message || 'Error al registrar pago.');
+        }
+      } catch (err) {
+        showModalAlert('alertRegistrarPago', 'error', 'Error de conexión.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function limpiarFormRegistrarPago() {
+      document.getElementById('rp_proyecto').value = '';
+      document.getElementById('rp_monto').value = '';
+      document.getElementById('rp_fecha').value = '';
+      document.getElementById('alertRegistrarPago').innerHTML = '';
+    }
+
+    function abrirRegistrarPagoConProyecto(proyectoId) {
+      document.getElementById('rp_proyecto').value = proyectoId;
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('rp_fecha').value = today;
+      openModal('modalRegistrarPago');
+    }
+
+    // --- Cambiar Estado Pipeline ---
+    function abrirCambiarEstado(clienteId, nombre, estadoActual) {
+      document.getElementById('ce_cliente_id').value = clienteId;
+      document.getElementById('ce_cliente_nombre').value = nombre;
+      document.getElementById('ce_nuevo_estado').value = estadoActual;
+      document.getElementById('alertCambiarEstado').innerHTML = '';
+      openModal('modalCambiarEstado');
+    }
+
+    async function cambiarEstadoCliente() {
+      const id = document.getElementById('ce_cliente_id').value;
+      const estado = document.getElementById('ce_nuevo_estado').value;
+
+      setLoading(true, 'Actualizando estado...');
+      try {
+        const res = await apiPost('cambiarEstadoCliente', { cliente_id: id, nuevo_estado: estado });
+        if (res.success) {
+          showToast('success', 'Estado actualizado', `Pipeline actualizado a: ${estado}`);
+          closeModal('modalCambiarEstado');
+          await cargarTodo();
+          if (currentSection === 'pipeline') renderPipeline();
+          if (currentSection === 'clientes') renderTablaClientes();
+        } else {
+          showModalAlert('alertCambiarEstado', 'error', res.message || 'Error al actualizar estado.');
+        }
+      } catch (err) {
+        showModalAlert('alertCambiarEstado', 'error', 'Error de conexión.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // --- Pagar Comisión ---
+    async function pagarComision(comisionId, afiliadoNombre, monto) {
+      if (!confirm(`¿Confirmas el pago de ${formatMoney(monto)} a ${afiliadoNombre}?`)) return;
+
+      setLoading(true, 'Procesando pago...');
+      try {
+        const fechaPagada = new Date().toISOString().split('T')[0];
+        const res = await apiPost('pagarComision', { comision_id: comisionId, fecha_pagada: fechaPagada });
+        if (res.success) {
+          showToast('success', 'Comisión pagada', `Comisión de ${formatMoney(monto)} marcada como pagada.`);
+          await cargarTodo();
+          if (currentSection === 'comisiones') renderTablaComisiones();
+        } else {
+          showToast('error', 'Error', res.message || 'No se pudo marcar la comisión como pagada.');
+        }
+      } catch (err) {
+        showToast('error', 'Error de conexión', 'Intenta nuevamente.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // --- Ver Detalle Afiliado ---
+    function verDetalleAfiliado(afiliadoId) {
+      const af = ALL_AFILIADOS.find(a => a.id === afiliadoId);
+      if (!af) return;
+
+      const clientes = ALL_CLIENTES.filter(c => c.afiliado_id === afiliadoId);
+      const comisionesPend = ALL_COMISIONES.filter(c => c.afiliado_id === afiliadoId && c.estado === 'pendiente').reduce((s, c) => s + parseFloat(c.monto_comision || 0), 0);
+      const comisionesPag = ALL_COMISIONES.filter(c => c.afiliado_id === afiliadoId && c.estado === 'pagada').reduce((s, c) => s + parseFloat(c.monto_comision || 0), 0);
+      const totalVentas = ALL_PAGOS.filter(p => { const pr = ALL_PROYECTOS.find(pr => pr.id === p.proyecto_id); return pr && pr.afiliado_id === afiliadoId; }).reduce((s, p) => s + parseFloat(p.monto || 0), 0);
+      const clientesCerr = clientes.filter(c => c.estado_pipeline === 'cerrado').length;
+
+      document.getElementById('modalVerAfiliadoBody').innerHTML = `
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">
+      <div class="stat-card card-sm"><div class="stat-label">Clientes</div><div class="stat-value" style="font-size:22px;">${clientes.length}</div></div>
+      <div class="stat-card card-sm"><div class="stat-label">Cerrados</div><div class="stat-value" style="font-size:22px;">${clientesCerr}</div></div>
+      <div class="stat-card card-sm"><div class="stat-label">Total Vendido</div><div class="stat-value" style="font-size:22px;">${formatMoney(totalVentas)}</div></div>
+      <div class="stat-card card-sm"><div class="stat-label">Comisión Pendiente</div><div class="stat-value" style="font-size:22px;">${formatMoney(comisionesPend)}</div></div>
+      <div class="stat-card card-sm"><div class="stat-label">Comisión Pagada</div><div class="stat-value" style="font-size:22px;">${formatMoney(comisionesPag)}</div></div>
+      <div class="stat-card card-sm"><div class="stat-label">%</div><div class="stat-value" style="font-size:22px;">${af.porcentaje || 30}%</div></div>
+    </div>
+    <div class="divider"></div>
+    <div><b>Email:</b> ${af.email} &nbsp;|&nbsp; <b>Teléfono:</b> ${af.telefono || '–'} &nbsp;|&nbsp; <b>País:</b> ${af.pais || '–'}</div>
+    <div class="mt-16">
+      <div class="fw-700 mb-8">Clientes asignados:</div>
+      ${clientes.length === 0
+          ? '<p class="text-muted text-sm">Sin clientes aún</p>'
+          : `<div class="table-wrapper"><table><thead><tr><th>Nombre</th><th>Pipeline</th><th>Registro</th></tr></thead><tbody>
+          ${clientes.map(c => `<tr><td>${c.nombre}</td><td><span class="badge badge-${c.estado_pipeline}">${c.estado_pipeline}</span></td><td>${formatDate(c.fecha_registro)}</td></tr>`).join('')}
+          </tbody></table></div>`
+        }
+    </div>
+  `;
+      openModal('modalVerAfiliado');
+    }
+
+    // ============================================================
+    //  MODALS
+    // ============================================================
+    function openModal(id) {
+      document.getElementById(id).classList.add('open');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+
+    // Close modal on backdrop click
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+      backdrop.addEventListener('click', function (e) {
+        if (e.target === this) this.classList.remove('open');
+      });
+    });
+
+    // ============================================================
+    //  UTILITIES
+    // ============================================================
+    function formatMoney(val) {
+      const n = parseFloat(val) || 0;
+      return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '–';
+      try {
+        return new Date(dateStr).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      } catch { return dateStr; }
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    // ============================================================
+    //  INIT
+    // ============================================================
+    cargarTodo().then(() => lucide.createIcons());
+    // Re-render icons after any dynamic content update
+    const _origRender = renderDashboard;
+    renderDashboard = function () { _origRender(); lucide.createIcons(); };
+  </script>
+
+</body>
+
+</html>

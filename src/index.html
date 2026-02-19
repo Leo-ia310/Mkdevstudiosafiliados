@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MK Dev Studio – Iniciar Sesión</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <p>Verificando credenciales...</p>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Login Page -->
+  <div class="login-page">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="logo-mark">
+          <img class="logo" src="/public/logo.jpg" alt="logo">
+        </div>
+        <h1>MK Dev Studio</h1>
+        <p>Plataforma de Gestión de Afiliados</p>
+      </div>
+
+      <div id="alertBox"></div>
+
+      <form id="loginForm" autocomplete="off">
+        <div class="form-group">
+          <label for="email">Correo electrónico</label>
+          <input type="email" id="email" placeholder="tu@email.com" required autocomplete="off" />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <input type="password" id="password" placeholder="••••••••" required autocomplete="off" />
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
+          <span id="loginBtnText">Iniciar sesión</span>
+          <span id="loginBtnSpinner" style="display:none;" class="spinner" style="width:16px;height:16px;"></span>
+        </button>
+      </form>
+
+      <p class="text-sm text-muted mt-16" style="text-align:center;">
+        ¿Problemas para acceder? Contacta al administrador.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    //  CONFIG — Reemplaza APPS_SCRIPT_URL con la URL de tu Web App
+    // ============================================================
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbztEzTUHzTRdQIVApVUxpAiBmbzcYagAjrOA95DoRcALuoWe091P8lpOtCnZZZvC3Uk_g/exec';
+
+    // ============================================================
+    //  UTILITIES
+    // ============================================================
+    function showToast(type, title, msg, duration = 4000) {
+      const container = document.getElementById('toastContainer');
+      const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.innerHTML = `
+    <span class="toast-icon">${icons[type] || 'ℹ️'}</span>
+    <div class="toast-body">
+      <div class="toast-title">${title}</div>
+      ${msg ? `<div class="toast-msg">${msg}</div>` : ''}
+    </div>
+    <span class="toast-close" onclick="removeToast(this.parentElement)">✕</span>
+  `;
+      container.appendChild(toast);
+      if (duration > 0) setTimeout(() => removeToast(toast), duration);
+    }
+
+    function removeToast(el) {
+      if (!el || !el.parentElement) return;
+      el.classList.add('removing');
+      setTimeout(() => el.remove(), 300);
+    }
+
+    function showAlert(type, msg) {
+      document.getElementById('alertBox').innerHTML = `
+    <div class="alert alert-${type}">
+      <span>${msg}</span>
+      <span class="alert-dismiss" onclick="this.parentElement.remove()">✕</span>
+    </div>
+  `;
+    }
+
+    function setLoading(show) {
+      document.getElementById('loadingOverlay').classList.toggle('show', show);
+    }
+
+    // ============================================================
+    //  SESSION CHECK — si ya hay sesión activa, redirigir
+    // ============================================================
+    (function checkSession() {
+      const session = getSession();
+      if (session) {
+        redirectByRole(session.rol);
+      }
+    })();
+
+    function getSession() {
+      try {
+        const raw = localStorage.getItem('mk_session');
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function saveSession(data) {
+      localStorage.setItem('mk_session', JSON.stringify({
+        user_id: data.id,
+        user_nombre: data.nombre,
+        user_rol: data.rol,
+        user_afiliado_id: data.id,
+        user_email: data.email,
+        login_ts: Date.now()
+      }));
+    }
+
+    function redirectByRole(rol) {
+      if (rol === 'admin') {
+        window.location.href = 'dashboard_admin.html';
+      } else if (rol === 'afiliado') {
+        window.location.href = 'dashboard_afiliado.html';
+      }
+    }
+
+    // ============================================================
+    //  LOGIN FORM HANDLER
+    // ============================================================
+    document.getElementById('loginForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        showAlert('error', 'Por favor completa todos los campos.');
+        return;
+      }
+
+      const btn = document.getElementById('loginBtn');
+      const btnText = document.getElementById('loginBtnText');
+      const spinner = document.getElementById('loginBtnSpinner');
+
+      btn.disabled = true;
+      btnText.style.display = 'none';
+      spinner.style.display = 'inline-block';
+
+      try {
+        const params = new URLSearchParams({
+          action: 'login',
+          email: email,
+          password: password
+        });
+
+        const response = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`, {
+          method: 'GET'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          const user = data.data;
+          saveSession(user);
+          showToast('success', '¡Bienvenido!', `Hola ${user.nombre}`);
+          setTimeout(() => redirectByRole(user.rol), 800);
+        } else {
+          showAlert('error', data.message || 'Credenciales incorrectas. Verifica tu email y contraseña.');
+        }
+      } catch (err) {
+        console.error('Login error:', err);
+        showAlert('error', 'No se pudo conectar al servidor. Verifica tu conexión o la URL del script.');
+      } finally {
+        btn.disabled = false;
+        btnText.style.display = 'inline';
+        spinner.style.display = 'none';
+      }
+    });
+  </script>
+
+</body>
+
+</html>

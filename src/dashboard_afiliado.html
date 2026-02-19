@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MK Dev Studio – Panel Afiliado</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+
+<body>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <p id="loadingMsg">Cargando...</p>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Modal: Registrar Cliente -->
+  <div class="modal-backdrop" id="modalCrearCliente">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Registrar Nuevo Cliente</h3>
+        <button class="modal-close" onclick="closeModal('modalCrearCliente')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="alertCrearCliente"></div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Nombre completo *</label>
+            <input type="text" id="cc_nombre" placeholder="Juan García" />
+          </div>
+          <div class="form-group">
+            <label>Teléfono (único) *</label>
+            <input type="text" id="cc_telefono" placeholder="+1 555 0000" />
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="cc_email" placeholder="cliente@email.com" />
+          </div>
+          <div class="form-group">
+            <label>País</label>
+            <input type="text" id="cc_pais" placeholder="México" />
+          </div>
+        </div>
+        <div class="alert alert-info mt-8" style="font-size:12px;">
+          <i data-lucide="info" style="width:13px;height:13px;flex-shrink:0;"></i> El cliente quedará registrado
+          automáticamente a tu cuenta de afiliado.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalCrearCliente')">Cancelar</button>
+        <button class="btn btn-primary" onclick="crearCliente()">Registrar cliente</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Ver detalle cliente -->
+  <div class="modal-backdrop" id="modalVerCliente">
+    <div class="modal" style="max-width:560px;">
+      <div class="modal-header">
+        <h3>Detalle del Cliente</h3>
+        <button class="modal-close" onclick="closeModal('modalVerCliente')">✕</button>
+      </div>
+      <div class="modal-body" id="modalVerClienteBody">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalVerCliente')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Crear Proyecto -->
+  <div class="modal-backdrop" id="modalCrearProyecto">
+    <div class="modal" style="max-width:600px;">
+      <div class="modal-header">
+        <h3>Proponer Nuevo Proyecto</h3>
+        <button class="modal-close" onclick="closeModal('modalCrearProyecto')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="alertCrearProyecto"></div>
+        <div class="alert alert-info mb-16" style="font-size:12px;">
+          <i data-lucide="info" style="width:13px;height:13px;flex-shrink:0;"></i>
+          El proyecto quedará en estado <strong>Pendiente</strong> hasta que el admin lo apruebe.
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Cliente *</label>
+            <select id="cp_cliente_id"
+              style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 14px;color:var(--text-primary);outline:none;width:100%;font-size:14px;">
+              <option value="">Seleccionar cliente...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tipo de servicio *</label>
+            <select id="cp_tipo_servicio"
+              style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 14px;color:var(--text-primary);outline:none;width:100%;font-size:14px;">
+              <option value="">Seleccionar servicio...</option>
+              <option value="Landing Page">Landing Page</option>
+              <option value="Sitio Web Corporativo">Sitio Web Corporativo</option>
+              <option value="Tienda E-commerce">Tienda E-commerce</option>
+              <option value="Aplicación Web">Aplicación Web</option>
+              <option value="Aplicación Móvil">Aplicación Móvil</option>
+              <option value="Branding & Diseño">Branding & Diseño</option>
+              <option value="SEO & Marketing">SEO & Marketing</option>
+              <option value="Automatización">Automatización</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Precio estimado (USD)</label>
+            <input type="number" id="cp_precio" placeholder="0.00" min="0" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label>Fecha de entrega estimada</label>
+            <input type="date" id="cp_fecha_entrega" />
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:4px;">
+          <label>Descripción del proyecto *</label>
+          <textarea id="cp_descripcion" rows="5" placeholder="Describe qué necesita el cliente, requerimientos específicos, referencias, contexto importante para el equipo..."
+            style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px 14px;color:var(--text-primary);outline:none;font-size:14px;font-family:inherit;resize:vertical;line-height:1.6;box-sizing:border-box;"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalCrearProyecto')">Cancelar</button>
+        <button class="btn btn-primary" onclick="crearProyecto()">
+          <i data-lucide="send" style="width:14px;height:14px;"></i> Enviar propuesta
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar overlay (closes sidebar on mobile tap) -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <!-- APP LAYOUT -->
+  <div class="app-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="logo-mark">
+            <img class="logo" src="../public/logo.jpg" alt="logo">
+          </div>
+          <div>
+            <div class="logo-text">MK Dev Studio</div>
+            <div class="logo-sub">Panel Afiliado</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-user">
+        <div class="avatar" id="sidebarAvatar">A</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebarNombre">Afiliado</div>
+          <span class="user-role role-afiliado">Afiliado</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Mi Panel</div>
+        <div class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard">
+          <i data-lucide="layout-dashboard" class="nav-icon"></i> Dashboard
+        </div>
+        <div class="nav-item" onclick="showSection('mis-clientes')" id="nav-mis-clientes">
+          <i data-lucide="users" class="nav-icon"></i> Mis Clientes
+        </div>
+          <div class="nav-item" onclick="showSection('mis-proyectos')" id="nav-mis-proyectos">
+            <i data-lucide="folder-kanban" class="nav-icon"></i> Mis Proyectos
+          </div>
+          <div class="nav-item" onclick="showSection('mis-comisiones')" id="nav-mis-comisiones">
+            <i data-lucide="coins" class="nav-icon"></i> Mis Comisiones
+          </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn btn-secondary btn-block btn-sm" onclick="cerrarSesion()">
+          <i data-lucide="log-out" style="width:14px;height:14px;"></i> Cerrar sesión
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+
+        <!-- TOPBAR -->
+        <div class="topbar">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Menú">
+              <i data-lucide="menu"></i>
+            </button>
+            <div class="topbar-title">
+              <h2 id="topbarTitle">Dashboard</h2>
+              <p id="topbarSub">Tu resumen de actividad</p>
+            </div>
+          </div>
+          <div class="topbar-actions">
+            <button class="btn btn-primary btn-sm" onclick="openModal('modalCrearCliente')">
+              <i data-lucide="user-plus" style="width:14px;height:14px;"></i> <span>Nuevo Cliente</span>
+            </button>
+            <button class="btn-icon" onclick="recargarTodo()" title="Actualizar"><i data-lucide="refresh-cw"
+                style="width:15px;height:15px;"></i></button>
+          </div>
+        </div>
+
+      <!-- PAGE CONTENT -->
+      <div class="page-content">
+
+        <!-- ======= DASHBOARD ======= -->
+        <div id="section-dashboard" class="section-tabs active">
+
+          <!-- Bienvenida -->
+          <div class="card mb-24"
+            style="background:linear-gradient(135deg,rgba(123,63,228,0.12) 0%,rgba(155,108,255,0.06) 100%);border-color:var(--border);">
+            <div class="flex justify-between items-center">
+              <div>
+                <h3 style="font-size:20px;font-weight:800;margin-bottom:4px;">
+                  ¡Hola, <span id="welcomeName">Afiliado</span>!
+                </h3>
+                <p class="text-muted">Aquí tienes un resumen de tu actividad y comisiones.</p>
+              </div>
+              <div style="opacity:0.35;">
+                <i data-lucide="handshake" style="width:52px;height:52px;"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats Grid -->
+          <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+              <div class="stat-icon"><i data-lucide="users"></i></div>
+              <div class="stat-label">Total Clientes</div>
+              <div class="stat-value" id="stat_total_clientes">0</div>
+              <div class="stat-sub">Registrados por ti</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon"><i data-lucide="check-circle-2"></i></div>
+              <div class="stat-label">Clientes Cerrados</div>
+              <div class="stat-value" id="stat_clientes_cerrados">0</div>
+              <div class="stat-sub">Conversiones logradas</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon"><i data-lucide="trending-up"></i></div>
+              <div class="stat-label">Total Vendido</div>
+              <div class="stat-value" id="stat_total_vendido">$0</div>
+              <div class="stat-sub">Pagos de tus proyectos</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon"><i data-lucide="coins"></i></div>
+              <div class="stat-label">Comisión Generada</div>
+              <div class="stat-value" id="stat_comision_generada">$0</div>
+              <div class="stat-sub">Total acumulado</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon"><i data-lucide="clock"></i></div>
+              <div class="stat-label">Comisión Pendiente</div>
+              <div class="stat-value" id="stat_comision_pendiente">$0</div>
+              <div class="stat-sub">Por cobrar</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon"><i data-lucide="wallet"></i></div>
+              <div class="stat-label">Comisión Cobrada</div>
+              <div class="stat-value" id="stat_comision_pagada">$0</div>
+              <div class="stat-sub">Ya recibida</div>
+            </div>
+          </div>
+
+          <!-- Mis Clientes recientes + Comisiones pendientes -->
+          <div class="grid-2 mt-16">
+
+            <!-- Ultimos Clientes -->
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title"><i data-lucide="users"
+                      style="width:15px;height:15px;display:inline;vertical-align:middle;margin-right:6px;"></i>Últimos
+                    Clientes</div>
+                  <div class="card-subtitle">Tus registros más recientes</div>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="openModal('modalCrearCliente')"><i
+                    data-lucide="user-plus" style="width:13px;height:13px;"></i> Nuevo</button>
+              </div>
+              <div id="ultimosClientesContainer">
+                <div class="empty-state" style="padding:30px 0;">
+                  <div class="empty-icon"><i data-lucide="users"></i></div>
+                  <p>Cargando clientes...</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Comisiones Pendientes -->
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title"><i data-lucide="coins"
+                      style="width:15px;height:15px;display:inline;vertical-align:middle;margin-right:6px;"></i>Comisiones
+                    Pendientes</div>
+                  <div class="card-subtitle">A la espera de pago del admin</div>
+                </div>
+              </div>
+              <div id="comisionesPendientesContainer">
+                <div class="empty-state" style="padding:30px 0;">
+                  <div class="empty-icon"><i data-lucide="clock"></i></div>
+                  <p>Cargando comisiones...</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Pipeline propio -->
+          <div class="card mt-16">
+            <div class="card-header">
+              <div>
+                <div class="card-title"><i data-lucide="kanban"
+                    style="width:15px;height:15px;display:inline;vertical-align:middle;margin-right:6px;"></i>Estado de
+                  mi Pipeline</div>
+                <div class="card-subtitle">Distribución de clientes por etapa</div>
+              </div>
+            </div>
+            <div id="pipelineResumenContainer">
+              <div class="empty-state" style="padding:30px 0;">
+                <div class="empty-icon"><i data-lucide="bar-chart-2"></i></div>
+                <p>Cargando pipeline...</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ======= MIS CLIENTES ======= -->
+        <div id="section-mis-clientes" class="section-tabs">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Mis Clientes</div>
+                <div class="card-subtitle" id="misClientesCount">Cargando...</div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="openModal('modalCrearCliente')"><i data-lucide="user-plus"
+                  style="width:14px;height:14px;"></i> Registrar cliente</button>
+            </div>
+            <div class="search-bar">
+              <div class="search-input-wrapper">
+                <span class="search-icon"><i data-lucide="search" style="width:14px;height:14px;"></i></span>
+                <input type="text" id="searchMisClientes" placeholder="Buscar por nombre, email, teléfono..."
+                  oninput="filtrarMisClientes()" />
+              </div>
+              <select id="filterMisClientesEstado" onchange="filtrarMisClientes()"
+                style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:9px 14px;color:var(--text-primary);outline:none;">
+                <option value="">Todos los estados</option>
+                <option value="nuevo">Nuevo</option>
+                <option value="contactado">Contactado</option>
+                <option value="cotizado">Cotizado</option>
+                <option value="negociando">Negociando</option>
+                <option value="cerrado">Cerrado</option>
+                <option value="perdido">Perdido</option>
+                <option value="en_desarrollo">En desarrollo</option>
+                <option value="entregado">Entregado</option>
+              </select>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Teléfono</th>
+                    <th>Email</th>
+                    <th>País</th>
+                    <th>Pipeline</th>
+                    <th>Proyectos</th>
+                    <th>Registro</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaMisClientes">
+                  <tr>
+                    <td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">Cargando...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+          <!-- ======= MIS PROYECTOS ======= -->
+          <div id="section-mis-proyectos" class="section-tabs">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Mis Proyectos</div>
+                  <div class="card-subtitle" id="misProyectosCount">Cargando...</div>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="abrirModalCrearProyecto()">
+                  <i data-lucide="plus" style="width:14px;height:14px;"></i> Proponer proyecto
+                </button>
+              </div>
+
+              <!-- filtros -->
+              <div class="search-bar">
+                <select id="filterMisProyectosEstado" onchange="filtrarMisProyectos()"
+                  style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:9px 14px;color:var(--text-primary);outline:none;">
+                  <option value="">Todos los estados</option>
+                  <option value="pendiente">Pendiente (aprobación)</option>
+                  <option value="en_progreso">En progreso</option>
+                  <option value="completado">Completado</option>
+                  <option value="cancelado">Cancelado</option>
+                </select>
+              </div>
+
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Cliente</th>
+                      <th>Servicio</th>
+                      <th>Descripción</th>
+                      <th>Precio Est.</th>
+                      <th>Estado</th>
+                      <th>Entrega Est.</th>
+                      <th>Enviado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaMisProyectos">
+                    <tr>
+                      <td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">Cargando...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ======= MIS COMISIONES ======= -->
+        <div id="section-mis-comisiones" class="section-tabs">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Mis Comisiones</div>
+                <div class="card-subtitle" id="misComisionesCount">Cargando...</div>
+              </div>
+            </div>
+
+            <!-- Resumen financiero -->
+            <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;"
+              id="comisionesStatsGrid">
+            </div>
+
+            <div class="search-bar">
+              <select id="filterMisComisionesEstado" onchange="filtrarMisComisiones()"
+                style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:9px 14px;color:var(--text-primary);outline:none;">
+                <option value="">Todos los estados</option>
+                <option value="pendiente">Pendiente</option>
+                <option value="pagada">Pagada</option>
+              </select>
+            </div>
+
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Proyecto / Servicio</th>
+                    <th>Cliente</th>
+                    <th>Monto Pagado</th>
+                    <th>% Comisión</th>
+                    <th>Mi Comisión</th>
+                    <th>Estado</th>
+                    <th>Fecha Generada</th>
+                    <th>Fecha Cobrada</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaMisComisiones">
+                  <tr>
+                    <td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);">Cargando...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /page-content -->
+    </div><!-- /main-content -->
+  </div><!-- /app-layout -->
+
+  <script>
+    // ============================================================
+    //  CONFIG
+    // ============================================================
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbztEzTUHzTRdQIVApVUxpAiBmbzcYagAjrOA95DoRcALuoWe091P8lpOtCnZZZvC3Uk_g/exec';
+
+    // ============================================================
+    //  SESSION
+    // ============================================================
+    const SESSION = (function () {
+      try { return JSON.parse(localStorage.getItem('mk_session')); } catch { return null; }
+    })();
+
+    if (!SESSION || SESSION.user_rol !== 'afiliado') {
+      window.location.href = 'index.html';
+    }
+
+    const AFILIADO_ID = SESSION.user_afiliado_id;
+
+    // Set sidebar user info
+    document.getElementById('sidebarNombre').textContent = SESSION.user_nombre || 'Afiliado';
+    document.getElementById('sidebarAvatar').textContent = (SESSION.user_nombre || 'A')[0].toUpperCase();
+    document.getElementById('welcomeName').textContent = SESSION.user_nombre || 'Afiliado';
+
+      // ============================================================
+      //  SIDEBAR TOGGLE (mobile)
+      // ============================================================
+      function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('open');
+      }
+
+      function closeSidebar() {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebarOverlay').classList.remove('open');
+      }
+
+      function cerrarSesion() {
+        localStorage.removeItem('mk_session');
+      window.location.href = 'index.html';
+    }
+
+    // ============================================================
+    //  STATE
+    // ============================================================
+    let MIS_CLIENTES = [];
+    let ALL_PROYECTOS = [];
+    let ALL_PAGOS = [];
+    let MIS_COMISIONES = [];
+    let currentSection = 'dashboard';
+
+    // ============================================================
+    //  TOAST / LOADING
+    // ============================================================
+    function showToast(type, title, msg, duration = 4000) {
+      const container = document.getElementById('toastContainer');
+      const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.innerHTML = `
+    <span class="toast-icon">${icons[type] || 'ℹ️'}</span>
+    <div class="toast-body">
+      <div class="toast-title">${title}</div>
+      ${msg ? `<div class="toast-msg">${msg}</div>` : ''}
+    </div>
+    <span class="toast-close" onclick="removeToast(this.parentElement)">✕</span>
+  `;
+      container.appendChild(toast);
+      if (duration > 0) setTimeout(() => removeToast(toast), duration);
+    }
+
+    function removeToast(el) {
+      if (!el || !el.parentElement) return;
+      el.classList.add('removing');
+      setTimeout(() => el.remove(), 300);
+    }
+
+    function setLoading(show, msg = 'Cargando...') {
+      document.getElementById('loadingMsg').textContent = msg;
+      document.getElementById('loadingOverlay').classList.toggle('show', show);
+    }
+
+    function showModalAlert(containerId, type, msg) {
+      document.getElementById(containerId).innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+    }
+
+    // ============================================================
+    //  API
+    // ============================================================
+    async function apiCall(params) {
+      const url = `${APPS_SCRIPT_URL}?${new URLSearchParams(params).toString()}`;
+      const res = await fetch(url);
+      return res.json();
+    }
+
+    async function apiPost(action, body) {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        // 'text/plain' evita el preflight CORS que Google Apps Script no soporta
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action, ...body })
+      });
+      return res.json();
+    }
+
+    // ============================================================
+    //  NAVIGATION
+    // ============================================================
+    const SECTION_META = {
+      'dashboard': { title: 'Dashboard', sub: 'Tu resumen de actividad y comisiones' },
+      'mis-clientes': { title: 'Mis Clientes', sub: 'Clientes que has registrado' },
+      'mis-proyectos': { title: 'Mis Proyectos', sub: 'Proyectos propuestos y activos' },
+      'mis-comisiones': { title: 'Mis Comisiones', sub: 'Historial de comisiones generadas' }
+    };
+
+      function showSection(name) {
+        document.querySelectorAll('.section-tabs').forEach(s => s.classList.remove('active'));
+        document.getElementById(`section-${name}`).classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(`nav-${name}`).classList.add('active');
+        const meta = SECTION_META[name] || {};
+        document.getElementById('topbarTitle').textContent = meta.title || name;
+        document.getElementById('topbarSub').textContent = meta.sub || '';
+        currentSection = name;
+        closeSidebar(); // auto-close on mobile nav click
+
+        if (name === 'mis-clientes') renderTablaMisClientes();
+        if (name === 'mis-proyectos') renderTablaMisProyectos();
+        if (name === 'mis-comisiones') renderTablaMisComisiones();
+      }
+
+    // ============================================================
+    //  LOAD DATA
+    // ============================================================
+    async function cargarTodo() {
+      setLoading(true, 'Cargando tus datos...');
+      try {
+        // El backend tiene solo getClientes/getProyectos/etc. generales,
+        // así que traemos todo y filtramos por AFILIADO_ID en el frontend.
+        const [resClientes, resProyectos, resPagos, resComisiones] = await Promise.all([
+          apiCall({ action: 'getClientes' }),
+          apiCall({ action: 'getProyectos' }),
+          apiCall({ action: 'getPagos' }),
+          apiCall({ action: 'getComisiones' })
+        ]);
+
+        const todosClientes = resClientes.data || [];
+        const todosProyectos = resProyectos.data || [];
+        const todosPagos = resPagos.data || [];
+        const todasComisiones = resComisiones.data || [];
+
+        // Filtrar solo los que pertenecen a este afiliado
+        MIS_CLIENTES = todosClientes.filter(c => c.afiliado_id === AFILIADO_ID);
+        ALL_PROYECTOS = todosProyectos.filter(p => p.afiliado_id === AFILIADO_ID);
+        MIS_COMISIONES = todasComisiones.filter(c => c.afiliado_id === AFILIADO_ID);
+
+        // Pagos: solo los de proyectos de este afiliado
+        const misProyectoIds = new Set(ALL_PROYECTOS.map(p => p.id));
+        ALL_PAGOS = todosPagos.filter(p => misProyectoIds.has(p.proyecto_id));
+
+        renderDashboard();
+      } catch (err) {
+        console.error(err);
+        showToast('error', 'Error de conexión', 'No se pudo cargar los datos. Verifica la URL del script.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function recargarTodo() { cargarTodo(); }
+
+    // ============================================================
+    //  DASHBOARD RENDER
+    // ============================================================
+    function renderDashboard() {
+      const totalClientes = MIS_CLIENTES.length;
+      const cerrados = MIS_CLIENTES.filter(c => c.estado_pipeline === 'cerrado').length;
+      const totalVendido = ALL_PAGOS.reduce((s, p) => s + parseFloat(p.monto || 0), 0);
+      const comGenTotal = MIS_COMISIONES.reduce((s, c) => s + parseFloat(c.monto_comision || 0), 0);
+      const comPendiente = MIS_COMISIONES.filter(c => c.estado === 'pendiente').reduce((s, c) => s + parseFloat(c.monto_comision || 0), 0);
+      const comPagada = MIS_COMISIONES.filter(c => c.estado === 'pagada').reduce((s, c) => s + parseFloat(c.monto_comision || 0), 0);
+
+      document.getElementById('stat_total_clientes').textContent = totalClientes;
+      document.getElementById('stat_clientes_cerrados').textContent = cerrados;
+      document.getElementById('stat_total_vendido').textContent = formatMoney(totalVendido);
+      document.getElementById('stat_comision_generada').textContent = formatMoney(comGenTotal);
+      document.getElementById('stat_comision_pendiente').textContent = formatMoney(comPendiente);
+      document.getElementById('stat_comision_pagada').textContent = formatMoney(comPagada);
+
+      renderUltimosClientes();
+      renderComisionesPendientes();
+      renderPipelineResumen();
+    }
+
+    function renderUltimosClientes() {
+      const container = document.getElementById('ultimosClientesContainer');
+      const sorted = [...MIS_CLIENTES].sort((a, b) => new Date(b.fecha_registro) - new Date(a.fecha_registro)).slice(0, 6);
+
+      if (sorted.length === 0) {
+        container.innerHTML = `
+      <div class="empty-state" style="padding:20px 0;">
+        <div class="empty-icon" style="font-size:32px;">👥</div>
+        <p>Aún no has registrado clientes</p>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modalCrearCliente')">Registrar primer cliente</button>
+      </div>
+    `;
+        return;
+      }
+
+      container.innerHTML = sorted.map(c => {
+        const proyectosCliente = ALL_PROYECTOS.filter(p => p.cliente_id === c.id).length;
+        return `
+      <div style="padding:10px 0;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;" onclick="verDetalleCliente('${c.id}')">
+        <div>
+          <div class="fw-600" style="font-size:13px;">${c.nombre}</div>
+          <div class="text-sm text-muted">📞 ${c.telefono} ${proyectosCliente > 0 ? `· ${proyectosCliente} proy.` : ''}</div>
+        </div>
+        <span class="badge badge-${c.estado_pipeline}">${c.estado_pipeline}</span>
+      </div>
+    `;
+      }).join('');
+    }
+
+    function renderComisionesPendientes() {
+      const container = document.getElementById('comisionesPendientesContainer');
+      const pendientes = MIS_COMISIONES.filter(c => c.estado === 'pendiente');
+
+      if (pendientes.length === 0) {
+        container.innerHTML = `
+      <div class="empty-state" style="padding:20px 0;">
+        <div class="empty-icon" style="font-size:32px;">✅</div>
+        <p>No tienes comisiones pendientes</p>
+      </div>
+    `;
+        return;
+      }
+
+      container.innerHTML = pendientes.map(c => {
+        const proy = ALL_PROYECTOS.find(p => p.id === c.proyecto_id);
+        const cliente = proy ? MIS_CLIENTES.find(cl => cl.id === proy.cliente_id) : null;
+        return `
+      <div style="padding:10px 0;border-bottom:1px solid var(--border-subtle);">
+        <div class="flex justify-between items-center">
+          <div>
+            <div class="fw-600" style="font-size:13px;">${proy ? proy.tipo_servicio : c.proyecto_id}</div>
+            <div class="text-sm text-muted">${cliente ? cliente.nombre : '–'} · ${formatDate(c.fecha_generada)}</div>
+          </div>
+          <div class="fw-700 text-accent">${formatMoney(c.monto_comision)}</div>
+        </div>
+        <div class="progress-bar mt-8">
+          <div class="progress-fill" style="width:100%;background:linear-gradient(90deg,rgba(123,63,228,0.3),rgba(155,108,255,0.3));"></div>
+        </div>
+        <div class="flex justify-between mt-4">
+          <span class="text-sm text-muted">Base: ${formatMoney(c.monto_pagado)}</span>
+          <span class="badge badge-pendiente">Pendiente de cobro</span>
+        </div>
+      </div>
+    `;
+      }).join('');
+    }
+
+    function renderPipelineResumen() {
+      const container = document.getElementById('pipelineResumenContainer');
+      const stages = [
+        { key: 'nuevo', label: 'Nuevo', color: 'var(--info)' },
+        { key: 'contactado', label: 'Contactado', color: 'var(--warning)' },
+        { key: 'cotizado', label: 'Cotizado', color: 'var(--accent-light)' },
+        { key: 'negociando', label: 'Negociando', color: '#FFD580' },
+        { key: 'cerrado', label: 'Cerrado', color: 'var(--success)' },
+        { key: 'en_desarrollo', label: 'En Desarrollo', color: '#80D4FF' },
+        { key: 'entregado', label: 'Entregado', color: '#80FFB8' },
+        { key: 'perdido', label: 'Perdido', color: 'var(--danger)' }
+      ];
+
+      const total = MIS_CLIENTES.length;
+      if (total === 0) {
+        container.innerHTML = `<div class="empty-state" style="padding:20px 0;"><div class="empty-icon" style="font-size:32px;">📊</div><p>Sin datos de pipeline aún</p></div>`;
+        return;
+      }
+
+      container.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">
+      ${stages.map(s => {
+        const count = MIS_CLIENTES.filter(c => c.estado_pipeline === s.key).length;
+        const pct = total > 0 ? (count / total * 100).toFixed(0) : 0;
+        return `
+          <div style="padding:14px 16px;background:rgba(255,255,255,0.03);border:1px solid var(--border-subtle);border-radius:10px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${s.color};margin-bottom:6px;">${s.label}</div>
+            <div style="font-size:24px;font-weight:800;">${count}</div>
+            <div class="progress-bar mt-8">
+              <div class="progress-fill" style="width:${pct}%;background:${s.color};opacity:0.8;"></div>
+            </div>
+            <div class="text-sm text-muted mt-4">${pct}% del total</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+    }
+
+    // ============================================================
+    //  MIS CLIENTES TABLE
+    // ============================================================
+    function renderTablaMisClientes() {
+      document.getElementById('misClientesCount').textContent = `${MIS_CLIENTES.length} clientes registrados por ti`;
+      filtrarMisClientes();
+    }
+
+    function filtrarMisClientes() {
+      const search = (document.getElementById('searchMisClientes').value || '').toLowerCase();
+      const estado = document.getElementById('filterMisClientesEstado').value;
+
+      let filtered = MIS_CLIENTES.filter(c => {
+        const matchSearch = !search || [c.nombre, c.email, c.telefono, c.pais].some(f => (f || '').toLowerCase().includes(search));
+        const matchEstado = !estado || c.estado_pipeline === estado;
+        return matchSearch && matchEstado;
+      });
+
+      const tbody = document.getElementById('tablaMisClientes');
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state" style="padding:30px 0;"><div class="empty-icon" style="font-size:32px;">👥</div><p>No hay clientes con ese filtro</p></div></td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(c => {
+        const proyectosCliente = ALL_PROYECTOS.filter(p => p.cliente_id === c.id);
+        const totalPagado = ALL_PAGOS.filter(p => {
+          const proy = ALL_PROYECTOS.find(pr => pr.id === p.proyecto_id);
+          return proy && proy.cliente_id === c.id;
+        }).reduce((s, p) => s + parseFloat(p.monto || 0), 0);
+
+        return `
+      <tr>
+        <td class="fw-600">${c.nombre}</td>
+        <td>${c.telefono}</td>
+        <td>${c.email || '–'}</td>
+        <td>${c.pais || '–'}</td>
+        <td><span class="badge badge-${c.estado_pipeline}">${c.estado_pipeline}</span></td>
+        <td>${proyectosCliente.length > 0 ? `<span class="text-accent fw-600">${proyectosCliente.length}</span>` : '–'}</td>
+        <td>${formatDate(c.fecha_registro)}</td>
+          <td>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="btn btn-secondary btn-sm" onclick="verDetalleCliente('${c.id}')">
+                👁 Ver
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="abrirModalCrearProyecto('${c.id}')">
+                <i data-lucide="plus" style="width:12px;height:12px;"></i> Proyecto
+              </button>
+            </div>
+          </td>
+      </tr>
+    `;
+      }).join('');
+    }
+
+    // ============================================================
+    //  MIS COMISIONES TABLE
+    // ============================================================
+    function renderTablaMisComisiones() {
+      const total = MIS_COMISIONES.length;
+      const pendiente = MIS_COMISIONES.filter(c => c.estado === 'pendiente').reduce((s, c) => s + parseFloat(c.monto_comision || 0), 0);
+      const pagada = MIS_COMISIONES.filter(c => c.estado === 'pagada').reduce((s, c) => s + parseFloat(c.monto_comision || 0), 0);
+      const totalCom = pendiente + pagada;
+
+      document.getElementById('misComisionesCount').textContent = `${total} comisiones`;
+
+      document.getElementById('comisionesStatsGrid').innerHTML = `
+    <div class="stat-card card-sm">
+      <div class="stat-label">Total Generado</div>
+      <div class="stat-value" style="font-size:22px;">${formatMoney(totalCom)}</div>
+    </div>
+    <div class="stat-card card-sm">
+      <div class="stat-label">Pendiente</div>
+      <div class="stat-value" style="font-size:22px;color:var(--warning);-webkit-text-fill-color:var(--warning);">${formatMoney(pendiente)}</div>
+    </div>
+    <div class="stat-card card-sm">
+      <div class="stat-label">Cobrado</div>
+      <div class="stat-value" style="font-size:22px;color:var(--success);-webkit-text-fill-color:var(--success);">${formatMoney(pagada)}</div>
+    </div>
+  `;
+
+      filtrarMisComisiones();
+    }
+
+    function filtrarMisComisiones() {
+      const estado = document.getElementById('filterMisComisionesEstado').value;
+      let filtered = MIS_COMISIONES;
+      if (estado) filtered = filtered.filter(c => c.estado === estado);
+
+      const tbody = document.getElementById('tablaMisComisiones');
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state" style="padding:30px 0;"><div class="empty-icon" style="font-size:32px;">💰</div><p>No hay comisiones</p><p class="text-sm">Las comisiones se generan cuando el admin registra pagos de tus proyectos</p></div></td></tr>`;
+        return;
+      }
+
+      const sorted = [...filtered].sort((a, b) => new Date(b.fecha_generada) - new Date(a.fecha_generada));
+
+      tbody.innerHTML = sorted.map(c => {
+        const proy = ALL_PROYECTOS.find(p => p.id === c.proyecto_id);
+        const cliente = proy ? MIS_CLIENTES.find(cl => cl.id === proy.cliente_id) : null;
+        return `
+      <tr>
+        <td class="text-muted">${c.id}</td>
+        <td class="fw-600">${proy ? proy.tipo_servicio : c.proyecto_id}</td>
+        <td>${cliente ? cliente.nombre : '–'}</td>
+        <td>${formatMoney(c.monto_pagado)}</td>
+        <td>${c.porcentaje || 30}%</td>
+        <td class="fw-700 text-accent">${formatMoney(c.monto_comision)}</td>
+        <td><span class="badge badge-${c.estado}">${c.estado}</span></td>
+        <td>${formatDate(c.fecha_generada)}</td>
+        <td>${c.fecha_pagada ? formatDate(c.fecha_pagada) : '<span class="text-muted">–</span>'}</td>
+      </tr>
+    `;
+      }).join('');
+    }
+
+    // ============================================================
+    //  VER DETALLE CLIENTE (solo lectura)
+    // ============================================================
+    function verDetalleCliente(clienteId) {
+      const c = MIS_CLIENTES.find(cl => cl.id === clienteId);
+      if (!c) return;
+
+      const proyectos = ALL_PROYECTOS.filter(p => p.cliente_id === clienteId);
+      const pagosTotal = ALL_PAGOS.filter(p => {
+        const pr = ALL_PROYECTOS.find(pr => pr.id === p.proyecto_id);
+        return pr && pr.cliente_id === clienteId;
+      }).reduce((s, p) => s + parseFloat(p.monto || 0), 0);
+
+      document.getElementById('modalVerClienteBody').innerHTML = `
+    <div class="grid-2 mb-16">
+      <div><div class="text-sm text-muted">Nombre</div><div class="fw-600 mt-4">${c.nombre}</div></div>
+      <div><div class="text-sm text-muted">Teléfono</div><div class="fw-600 mt-4">${c.telefono}</div></div>
+      <div><div class="text-sm text-muted">Email</div><div class="fw-600 mt-4">${c.email || '–'}</div></div>
+      <div><div class="text-sm text-muted">País</div><div class="fw-600 mt-4">${c.pais || '–'}</div></div>
+      <div><div class="text-sm text-muted">Estado Pipeline</div><div class="mt-4"><span class="badge badge-${c.estado_pipeline}">${c.estado_pipeline}</span></div></div>
+      <div><div class="text-sm text-muted">Fecha registro</div><div class="fw-600 mt-4">${formatDate(c.fecha_registro)}</div></div>
+    </div>
+    <div class="stats-grid" style="grid-template-columns:1fr 1fr;margin-bottom:16px;">
+      <div class="stat-card card-sm"><div class="stat-label">Proyectos</div><div class="stat-value" style="font-size:22px;">${proyectos.length}</div></div>
+      <div class="stat-card card-sm"><div class="stat-label">Total Pagado</div><div class="stat-value" style="font-size:22px;">${formatMoney(pagosTotal)}</div></div>
+    </div>
+    ${proyectos.length > 0 ? `
+      <div class="fw-700 mb-8">Proyectos:</div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Servicio</th><th>Precio</th><th>Estado</th><th>Entrega</th></tr></thead>
+          <tbody>
+            ${proyectos.map(p => `
+              <tr>
+                <td>${p.tipo_servicio}</td>
+                <td>${formatMoney(p.precio_total)}</td>
+                <td><span class="badge badge-${p.estado}">${p.estado}</span></td>
+                <td>${formatDate(p.fecha_entrega)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : `<p class="text-muted text-sm">Este cliente no tiene proyectos asignados aún.</p>`}
+  `;
+      openModal('modalVerCliente');
+    }
+
+    // ============================================================
+    //  MIS PROYECTOS TABLE
+    // ============================================================
+    function renderTablaMisProyectos() {
+      const count = ALL_PROYECTOS.length;
+      document.getElementById('misProyectosCount').textContent = `${count} proyecto${count !== 1 ? 's' : ''}`;
+      filtrarMisProyectos();
+    }
+
+    function filtrarMisProyectos() {
+      const estado = document.getElementById('filterMisProyectosEstado').value;
+      let filtered = ALL_PROYECTOS;
+      if (estado) filtered = filtered.filter(p => p.estado === estado);
+
+      const tbody = document.getElementById('tablaMisProyectos');
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr><td colspan="7">
+            <div class="empty-state" style="padding:30px 0;">
+              <div class="empty-icon" style="font-size:32px;">📁</div>
+              <p>No tienes proyectos propuestos aún</p>
+              <button class="btn btn-primary btn-sm" onclick="abrirModalCrearProyecto()">Proponer primer proyecto</button>
+            </div>
+          </td></tr>`;
+        return;
+      }
+
+      const sorted = [...filtered].sort((a, b) => new Date(b.fecha_inicio) - new Date(a.fecha_inicio));
+
+      tbody.innerHTML = sorted.map(p => {
+        const cliente = MIS_CLIENTES.find(c => c.id === p.cliente_id);
+        const desc = p.descripcion || '–';
+        const descCorta = desc.length > 60 ? desc.substring(0, 60) + '...' : desc;
+        const estadoBadge = p.estado === 'pendiente'
+          ? `<span class="badge" style="background:rgba(255,193,7,0.15);color:#FFD580;border:1px solid rgba(255,193,7,0.2);">⏳ Pendiente aprobación</span>`
+          : `<span class="badge badge-${p.estado}">${p.estado}</span>`;
+        return `
+          <tr>
+            <td class="fw-600">${cliente ? cliente.nombre : p.cliente_id}</td>
+            <td>${p.tipo_servicio}</td>
+            <td style="max-width:200px;">
+              <span title="${desc}" style="cursor:help;">${descCorta}</span>
+            </td>
+            <td>${p.precio_total ? formatMoney(p.precio_total) : '<span class="text-muted">–</span>'}</td>
+            <td>${estadoBadge}</td>
+            <td>${formatDate(p.fecha_entrega)}</td>
+            <td>${formatDate(p.fecha_inicio)}</td>
+          </tr>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    // ============================================================
+    //  ABRIR MODAL CREAR PROYECTO (con cliente preseleccionado opcional)
+    // ============================================================
+    function abrirModalCrearProyecto(clienteIdPreseleccionado = '') {
+      // Poblar select de clientes con los del afiliado
+      const select = document.getElementById('cp_cliente_id');
+      select.innerHTML = '<option value="">Seleccionar cliente...</option>';
+      const sorted = [...MIS_CLIENTES].sort((a, b) => a.nombre.localeCompare(b.nombre));
+      sorted.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = `${c.nombre} (${c.telefono})`;
+        if (c.id === clienteIdPreseleccionado) opt.selected = true;
+        select.appendChild(opt);
+      });
+
+      // Limpiar formulario
+      document.getElementById('cp_tipo_servicio').value = '';
+      document.getElementById('cp_precio').value = '';
+      document.getElementById('cp_fecha_entrega').value = '';
+      document.getElementById('cp_descripcion').value = '';
+      document.getElementById('alertCrearProyecto').innerHTML = '';
+
+      openModal('modalCrearProyecto');
+    }
+
+    // ============================================================
+    //  CREAR PROYECTO
+    // ============================================================
+    async function crearProyecto() {
+      const cliente_id = document.getElementById('cp_cliente_id').value.trim();
+      const tipo_servicio = document.getElementById('cp_tipo_servicio').value.trim();
+      const precio = document.getElementById('cp_precio').value.trim();
+      const fecha_entrega = document.getElementById('cp_fecha_entrega').value.trim();
+      const descripcion = document.getElementById('cp_descripcion').value.trim();
+
+      if (!cliente_id) {
+        showModalAlert('alertCrearProyecto', 'error', 'Debes seleccionar un cliente.');
+        return;
+      }
+      if (!tipo_servicio) {
+        showModalAlert('alertCrearProyecto', 'error', 'Selecciona el tipo de servicio.');
+        return;
+      }
+      if (!descripcion) {
+        showModalAlert('alertCrearProyecto', 'error', 'La descripción es obligatoria para que el admin tenga contexto.');
+        return;
+      }
+
+      // Verificar que el cliente pertenece a este afiliado
+      const clienteValido = MIS_CLIENTES.find(c => c.id === cliente_id);
+      if (!clienteValido) {
+        showModalAlert('alertCrearProyecto', 'error', 'Cliente no válido.');
+        return;
+      }
+
+      setLoading(true, 'Enviando propuesta de proyecto...');
+      try {
+        const res = await apiPost('crearProyecto', {
+          cliente_id,
+          afiliado_id: AFILIADO_ID,
+          tipo_servicio,
+          precio_total: precio || '0',
+          fecha_entrega: fecha_entrega || '',
+          descripcion,
+          estado: 'pendiente',
+          fecha_inicio: new Date().toISOString().split('T')[0]
+        });
+
+        if (res.success) {
+          showToast('success', 'Propuesta enviada', `El proyecto "${tipo_servicio}" está pendiente de aprobación.`);
+          closeModal('modalCrearProyecto');
+          await cargarTodo();
+          if (currentSection === 'mis-proyectos') renderTablaMisProyectos();
+        } else {
+          showModalAlert('alertCrearProyecto', 'error', res.message || 'Error al crear el proyecto.');
+        }
+      } catch (err) {
+        showModalAlert('alertCrearProyecto', 'error', 'Error de conexión. Inténtalo de nuevo.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // ============================================================
+    //  CREAR CLIENTE
+    // ============================================================
+    async function crearCliente() {
+      const nombre = document.getElementById('cc_nombre').value.trim();
+      const telefono = document.getElementById('cc_telefono').value.trim();
+      const email = document.getElementById('cc_email').value.trim();
+      const pais = document.getElementById('cc_pais').value.trim();
+
+      if (!nombre || !telefono) {
+        showModalAlert('alertCrearCliente', 'error', 'Nombre y teléfono son requeridos.');
+        return;
+      }
+
+      setLoading(true, 'Registrando cliente...');
+      try {
+        const res = await apiPost('crearCliente', {
+          nombre,
+          telefono,
+          email,
+          pais,
+          afiliado_id: AFILIADO_ID,
+          estado_pipeline: 'nuevo'
+        });
+        if (res.success) {
+          showToast('success', 'Cliente registrado', `${nombre} ha sido agregado a tu lista.`);
+          closeModal('modalCrearCliente');
+          limpiarFormCrearCliente();
+          await cargarTodo();
+        } else {
+          showModalAlert('alertCrearCliente', 'error', res.message || 'Error al registrar cliente.');
+        }
+      } catch (err) {
+        showModalAlert('alertCrearCliente', 'error', 'Error de conexión.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function limpiarFormCrearCliente() {
+      ['cc_nombre', 'cc_telefono', 'cc_email', 'cc_pais'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('alertCrearCliente').innerHTML = '';
+    }
+
+    // ============================================================
+    //  MODALS
+    // ============================================================
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+      backdrop.addEventListener('click', function (e) {
+        if (e.target === this) this.classList.remove('open');
+      });
+    });
+
+    // ============================================================
+    //  UTILITIES
+    // ============================================================
+    function formatMoney(val) {
+      const n = parseFloat(val) || 0;
+      return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '–';
+      try {
+        return new Date(dateStr).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      } catch { return dateStr; }
+    }
+
+    // ============================================================
+    //  INIT
+    // ============================================================
+    cargarTodo().then(() => lucide.createIcons());
+    // Re-render icons after any dynamic content update
+    const _origRender = renderDashboard;
+    renderDashboard = function () { _origRender(); lucide.createIcons(); };
+  </script>
+
+</body>
+
+</html>

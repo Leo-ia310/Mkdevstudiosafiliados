@@ -1,0 +1,9 @@
+{
+  "name": "mk-dev-studio-affiliates",
+  "version": "1.0.0",
+  "description": "MK Dev Studio - Affiliate Management Platform",
+  "scripts": {
+    "dev": "npx serve src -p 3000 --no-clipboard",
+    "start": "npx serve src -p 3000 --no-clipboard"
+  }
+}
