@@ -722,6 +722,7 @@
                     <th>Estado</th>
                     <th>Nicho</th>
                     <th>Presupuesto</th>
+                    <th>📅 Reunión</th>
                     <th>Próxima Acción</th>
                     <th>Fecha</th>
                     <th>Acciones</th>
@@ -881,11 +882,27 @@
     </div>
   </div>
 
+  <!-- Modal: Ver Detalle Lead -->
+  <div class="modal-backdrop" id="modalVerLead">
+    <div class="modal" style="max-width:680px">
+      <div class="modal-header">
+        <h3>📋 Detalle del Lead</h3>
+        <button class="modal-close" onclick="closeModal('modalVerLead')">✕</button>
+      </div>
+      <div class="modal-body" id="modalVerLeadBody">
+        <!-- contenido dinámico -->
+      </div>
+      <div class="modal-footer" id="modalVerLeadFooter">
+        <button class="btn btn-secondary" onclick="closeModal('modalVerLead')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ============================================================
     //  CONFIG
     // ============================================================
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw-iP17hCuHwxib6VQRc-bzJRKoylO0v9rSJJ5eihYPUBC704UlAjWyaJSSNQa8p1pfiA/exec';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxaRKV9popG5cEdYrthjuJ_QeJJrQSGa9zIsTxWQWJFHzkQQTryu84yPTDdC_K-Fe9s_w/exec';
 
     // ============================================================
     //  STATE
@@ -1876,10 +1893,14 @@
       });
       const tbody = document.getElementById('tablaLeadsAdmin');
       const HOY = new Date().toISOString().split('T')[0];
-      if (data.length === 0) { tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted)">Sin leads</td></tr>`; return; }
+      if (data.length === 0) { tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text-muted)">Sin leads</td></tr>`; return; }
       tbody.innerHTML = data.map(l => {
         const caller = ALL_AFILIADOS.find(a => a.id === l.asignado_a);
         const vencido = l.fecha_proxima_accion && l.fecha_proxima_accion.substring(0, 10) < HOY && !['CERRADO_GANADO', 'CERRADO_PERDIDO', 'PENDIENTE_VALIDACION'].includes(l.estado_actual);
+        const tieneReunion = l.fecha_reunion && l.fecha_reunion.trim() !== '';
+        const reunionHtml = tieneReunion
+          ? `<span style="background:rgba(250,204,21,.15);color:#facc15;border:1px solid rgba(250,204,21,.3);border-radius:6px;padding:2px 7px;font-size:11px;font-weight:600">${l.fecha_reunion.substring(0, 10)}</span>`
+          : `<span class="text-muted" style="font-size:11px">–</span>`;
         return `<tr style="${vencido ? 'background:rgba(239,68,68,.05)' : ''};${l.estado_actual === 'PENDIENTE_VALIDACION' ? 'background:rgba(250,204,21,.05)' : ''}"
           >
           <td><div class="fw-600">${escapeHtml(l.nombre_negocio)}</div><div class="text-sm text-muted">${escapeHtml(l.nombre_contacto)}</div></td>
@@ -1887,9 +1908,15 @@
           <td><span class="badge" style="font-size:10px;background:rgba(255,255,255,.07);color:var(--text-primary)">${l.estado_actual.replace(/_/g, ' ')}</span></td>
           <td>${escapeHtml(l.nicho || '–')}</td>
           <td>${l.presupuesto_estimado ? formatMoney(l.presupuesto_estimado) : '–'}</td>
+          <td>${reunionHtml}</td>
           <td style="font-size:12px;max-width:140px">${escapeHtml(l.proxima_accion || '–')}</td>
           <td style="font-size:12px;${vencido ? 'color:#f87171;font-weight:700' : ''}">${l.fecha_proxima_accion ? l.fecha_proxima_accion.substring(0, 10) : '–'}</td>
-          <td>${l.estado_actual === 'PENDIENTE_VALIDACION' ? `<button class="btn btn-success btn-sm" onclick="abrirAprobarLead('${l.id}')">⚡ Validar</button>` : ''}</td>
+          <td>
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              <button class="btn btn-secondary btn-sm" onclick="verDetalleLead('${l.id}')" title="Ver detalle completo">👁</button>
+              ${l.estado_actual === 'PENDIENTE_VALIDACION' ? `<button class="btn btn-success btn-sm" onclick="abrirAprobarLead('${l.id}')">⚡ Validar</button>` : ''}
+            </div>
+          </td>
         </tr>`;
       }).join('');
     }
@@ -2023,6 +2050,159 @@
           renderTablaLeadsAdmin();
         } else showModalAlert('alertAprobarLead', 'error', res.message || 'Error.');
       } catch { showModalAlert('alertAprobarLead', 'error', 'Error de conexión.'); }
+      finally { setLoading(false); }
+    }
+
+    // ============================================================
+    //  VER DETALLE LEAD (Admin)
+    // ============================================================
+    function verDetalleLead(leadId) {
+      const l = ALL_LEADS.find(x => x.id === leadId);
+      if (!l) return;
+      const caller = ALL_AFILIADOS.find(a => a.id === l.asignado_a);
+      const tieneReunion = l.fecha_reunion && l.fecha_reunion.trim() !== '';
+      const esReunionState = ['REUNION_AGENDADA', 'REUNION_REALIZADA'].includes(l.estado_actual);
+      const puedeCerrarGanado = ['CERRADO_GANADO', 'NEGOCIACION', 'PROPUESTA_ENVIADA', 'REUNION_REALIZADA'].includes(l.estado_actual);
+      const puedeConvertir = ['CERRADO_GANADO', 'PENDIENTE_VALIDACION', 'PROPUESTA_ENVIADA', 'NEGOCIACION', 'REUNION_REALIZADA'].includes(l.estado_actual);
+
+      const estadoColor = l.estado_actual === 'CERRADO_GANADO' ? '#4ade80'
+        : l.estado_actual === 'PENDIENTE_VALIDACION' ? '#facc15'
+          : l.estado_actual === 'REUNION_AGENDADA' ? '#60a5fa'
+            : l.estado_actual === 'NO_INTERESADO' || l.estado_actual === 'CERRADO_PERDIDO' ? '#f87171'
+              : 'var(--text-primary)';
+
+      document.getElementById('modalVerLeadBody').innerHTML = `
+        <!-- Info general -->
+        <div class="grid-2 mb-16">
+          <div><div class="text-sm text-muted">Negocio</div><div class="fw-700 mt-4">${escapeHtml(l.nombre_negocio)}</div></div>
+          <div><div class="text-sm text-muted">Contacto</div><div class="fw-600 mt-4">${escapeHtml(l.nombre_contacto)}</div></div>
+          <div><div class="text-sm text-muted">Teléfono</div><div class="fw-600 mt-4">${escapeHtml(l.telefono || '–')}</div></div>
+          <div><div class="text-sm text-muted">Email</div><div class="fw-600 mt-4">${escapeHtml(l.email || '–')}</div></div>
+          <div><div class="text-sm text-muted">Nicho</div><div class="fw-600 mt-4">${escapeHtml(l.nicho || '–')}</div></div>
+          <div><div class="text-sm text-muted">Caller Asignado</div><div class="fw-600 mt-4">${caller ? caller.nombre : l.asignado_a}</div></div>
+          <div style="grid-column:1/-1"><div class="text-sm text-muted">Estado</div><div class="mt-4"><span style="font-weight:700;color:${estadoColor}">${l.estado_actual.replace(/_/g, ' ')}</span></div></div>
+        </div>
+
+        <div style="height:1px;background:rgba(255,255,255,.07);margin-bottom:16px"></div>
+
+        <!-- Reunión -->
+        <div class="grid-2 mb-16">
+          <div>
+            <div class="text-sm text-muted">📅 Fecha de Reunión</div>
+            <div class="mt-4" style="${tieneReunion ? 'color:#facc15;font-weight:700;font-size:15px' : 'color:var(--text-muted)'}">${tieneReunion ? l.fecha_reunion : 'No agendada'}</div>
+          </div>
+          <div>
+            <div class="text-sm text-muted">Nivel de Interés</div>
+            <div class="fw-600 mt-4">${l.nivel_interes || '–'} / 5</div>
+          </div>
+          <div>
+            <div class="text-sm text-muted">Presupuesto Estimado</div>
+            <div class="fw-600 mt-4 text-accent">${l.presupuesto_estimado ? formatMoney(l.presupuesto_estimado) : '–'}</div>
+          </div>
+          <div>
+            <div class="text-sm text-muted">Monto Propuesto</div>
+            <div class="fw-600 mt-4 text-accent">${l.monto_propuesto ? formatMoney(l.monto_propuesto) : '–'}</div>
+          </div>
+          ${l.monto_cierre ? `<div><div class="text-sm text-muted">Monto Cierre (Admin)</div><div class="fw-700 mt-4" style="color:#4ade80">${formatMoney(l.monto_cierre)}</div></div>` : ''}
+        </div>
+
+        ${l.problema_detectado ? `
+        <div class="mb-16">
+          <div class="text-sm text-muted mb-4">Problema / Necesidad detectada</div>
+          <div style="background:rgba(123,63,228,.07);border:1px solid rgba(123,63,228,.2);border-radius:8px;padding:12px;font-size:13px;line-height:1.6">${escapeHtml(l.problema_detectado)}</div>
+        </div>` : ''}
+
+        <div class="mb-4" style="font-size:12px;color:var(--text-muted)">Próxima acción: <b>${escapeHtml(l.proxima_accion || '–')}</b> ${l.fecha_proxima_accion ? '· ' + l.fecha_proxima_accion.substring(0, 10) : ''}</div>
+
+        ${(tieneReunion) ? `
+        <div style="height:1px;background:rgba(255,255,255,.07);margin:16px 0"></div>
+        <div class="fw-700 mb-8" style="color:#60a5fa">📝 Resultado de la Reunión</div>
+        <div class="form-group">
+          <label>Estado post-reunión</label>
+          <select id="vl_nuevo_estado">
+            <option value="">Sin cambio de estado</option>
+            <option value="REUNION_REALIZADA" ${l.estado_actual === 'REUNION_REALIZADA' ? 'selected' : ''}>REUNION_REALIZADA</option>
+            <option value="INTERESADO">INTERESADO</option>
+            <option value="NO_INTERESADO">NO_INTERESADO</option>
+            <option value="PROPUESTA_ENVIADA">PROPUESTA_ENVIADA</option>
+            <option value="NEGOCIACION">NEGOCIACION</option>
+            <option value="CERRADO_PERDIDO">CERRADO_PERDIDO</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Nota del resultado *</label>
+          <textarea id="vl_nota_resultado" rows="3" placeholder="Ej: La reunión fue muy bien. El cliente está interesado en el paquete premium. Próximo paso: enviar propuesta formal..."
+            style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;color:var(--text-primary);font-family:inherit;font-size:14px;resize:vertical;outline:none;box-sizing:border-box"></textarea>
+        </div>
+        <div id="alertVerLead" class="mb-8"></div>
+        <button class="btn btn-primary btn-sm" onclick="registrarResultadoReunionAdmin('${l.id}')">💾 Guardar resultado de reunión</button>
+        ` : '<div id="alertVerLead"></div>'}
+      `;
+
+      const footer = document.getElementById('modalVerLeadFooter');
+      footer.innerHTML = `<button class="btn btn-secondary" onclick="closeModal('modalVerLead')">Cerrar</button>`;
+
+      if (puedeConvertir) {
+        footer.innerHTML += `
+          <button class="btn btn-success" onclick="convertirLeadAClienteAdmin('${l.id}', '${escapeHtml(l.nombre_negocio)}', '${caller ? escapeHtml(caller.nombre) : ''}')"
+            title="Crear este lead como cliente oficial con el caller como referidor">
+            🤝 Convertir a Cliente
+          </button>`;
+      }
+
+      if (l.estado_actual === 'PENDIENTE_VALIDACION') {
+        footer.innerHTML += `<button class="btn btn-warning btn-sm" onclick="closeModal('modalVerLead');abrirAprobarLead('${l.id}')">⚡ Validar Cierre</button>`;
+      }
+
+      openModal('modalVerLead');
+    }
+
+    // --- Registrar resultado de reunión (Admin) ---
+    async function registrarResultadoReunionAdmin(leadId) {
+      const nota = (document.getElementById('vl_nota_resultado').value || '').trim();
+      const nuevo_estado = document.getElementById('vl_nuevo_estado').value;
+      if (!nota || nota.length < 5) {
+        showModalAlert('alertVerLead', 'error', 'Escribe una nota de al menos 5 caracteres.');
+        return;
+      }
+      setLoading(true, 'Guardando resultado...');
+      try {
+        const res = await apiPost('registrarResultadoReunion', {
+          lead_id: leadId,
+          admin_id: SESSION.user_id,
+          nota,
+          nuevo_estado: nuevo_estado || undefined
+        });
+        if (res.success) {
+          showToast('success', 'Resultado guardado', res.message);
+          closeModal('modalVerLead');
+          await cargarTodo();
+          renderTablaLeadsAdmin();
+        } else {
+          showModalAlert('alertVerLead', 'error', res.message || 'Error al guardar.');
+        }
+      } catch { showModalAlert('alertVerLead', 'error', 'Error de conexión.'); }
+      finally { setLoading(false); }
+    }
+
+    // --- Convertir Lead a Cliente (Admin) ---
+    async function convertirLeadAClienteAdmin(leadId, nombreNegocio, callerNombre) {
+      const msg = `¿Convertir "${nombreNegocio}" a cliente oficial?\n\nEl caller ${callerNombre} quedará como referidor y recibirá comisiones (según su %) cuando se registren pagos de proyectos para este cliente.`;
+      if (!confirm(msg)) return;
+      setLoading(true, 'Convirtiendo lead a cliente...');
+      try {
+        const res = await apiPost('convertirLeadACliente', { lead_id: leadId, admin_id: SESSION.user_id });
+        if (res.success) {
+          showToast('success', '¡Convertido!', res.message);
+          closeModal('modalVerLead');
+          await cargarTodo();
+          // Redirigir a sección Clientes para ver el nuevo registro
+          showSection('clientes');
+          renderTablaClientes();
+        } else {
+          showToast('error', 'Error', res.message || 'No se pudo convertir el lead.');
+        }
+      } catch { showToast('error', 'Error de conexión', 'Inténtalo de nuevo.'); }
       finally { setLoading(false); }
     }
 

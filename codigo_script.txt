@@ -82,9 +82,11 @@ function doPost(e) {
       case 'agregarNota':            result = agregarNota(body); break;
       case 'marcarLlamada':          result = marcarLlamada(body); break;
       case 'agendarReunion':         result = agendarReunion(body); break;
-      case 'aprobarCerradoGanado':   result = aprobarCerradoGanado(body); break;
-      case 'rechazarCerradoGanado':  result = rechazarCerradoGanado(body); break;
-      case 'crearCaller':            result = crearCaller(body); break;
+      case 'aprobarCerradoGanado':        result = aprobarCerradoGanado(body); break;
+      case 'rechazarCerradoGanado':       result = rechazarCerradoGanado(body); break;
+      case 'crearCaller':                 result = crearCaller(body); break;
+      case 'registrarResultadoReunion':   result = registrarResultadoReunion(body); break;
+      case 'convertirLeadACliente':       result = convertirLeadACliente(body); break;
 
       default: result = { success: false, message: 'Accion POST no reconocida: ' + action };
     }
@@ -649,6 +651,91 @@ function crearCaller(body) {
   ]);
 
   return { success: true, message: 'Caller "' + nombre + '" creado correctamente.', id };
+}
+
+// ============================================================
+//  POST — Registrar Resultado de Reunión (ADMIN)
+// ============================================================
+function registrarResultadoReunion(body) {
+  const { lead_id, admin_id, nota, nuevo_estado } = body;
+  if (!lead_id || !nota)
+    return { success: false, message: 'lead_id y nota son requeridos.' };
+  if (nota.trim().length < 5)
+    return { success: false, message: 'La nota debe tener al menos 5 caracteres.' };
+
+  const sheet = getSheet('Leads');
+  const leads = sheetToObjects(sheet);
+  const lead = leads.find(l => l.id === lead_id);
+  if (!lead) return { success: false, message: 'Lead no encontrado.' };
+
+  const rowNum = findRowById(sheet, lead_id);
+  const estadoAnterior = lead.estado_actual;
+
+  // Si se pasa nuevo_estado válido, actualizarlo
+  let estadoFinal = estadoAnterior;
+  if (nuevo_estado && PIPELINE_ESTADOS.includes(nuevo_estado)) {
+    estadoFinal = nuevo_estado;
+    const colEstado = getColIndex(sheet, 'estado_actual');
+    if (colEstado !== -1) sheet.getRange(rowNum, colEstado + 1).setValue(estadoFinal);
+  }
+
+  // Actualizar fecha_actualizacion
+  const colFechaAct = getColIndex(sheet, 'fecha_actualizacion');
+  if (colFechaAct !== -1) sheet.getRange(rowNum, colFechaAct + 1).setValue(nowStr());
+
+  // Registrar en historial con prefijo [RESULTADO_REUNION]
+  registrarHistorial(lead_id, admin_id || 'admin', estadoAnterior, estadoFinal, '[RESULTADO_REUNION] ' + nota);
+
+  return { success: true, message: 'Resultado de reunión registrado correctamente.' };
+}
+
+// ============================================================
+//  POST — Convertir Lead a Cliente (ADMIN)
+//  El caller_id del lead se guarda como afiliado_id del cliente
+//  para que las comisiones se generen automáticamente.
+// ============================================================
+function convertirLeadACliente(body) {
+  const { lead_id, admin_id } = body;
+  if (!lead_id) return { success: false, message: 'lead_id es requerido.' };
+
+  const leads = sheetToObjects(getSheet('Leads'));
+  const lead = leads.find(l => l.id === lead_id);
+  if (!lead) return { success: false, message: 'Lead no encontrado.' };
+
+  // Verificar que el lead esté en un estado avanzado
+  const ESTADOS_VALIDOS = ['CERRADO_GANADO', 'PENDIENTE_VALIDACION', 'PROPUESTA_ENVIADA', 'NEGOCIACION', 'REUNION_REALIZADA'];
+  if (!ESTADOS_VALIDOS.includes(lead.estado_actual))
+    return { success: false, message: 'El lead debe estar en un estado avanzado para convertirse en cliente (mínimo REUNION_REALIZADA).' };
+
+  // Verificar si ya existe un cliente con el mismo teléfono
+  const clientesSheet = getSheet('Clientes');
+  const clientes = sheetToObjects(clientesSheet);
+  if (clientes.find(c => c.telefono === lead.telefono))
+    return { success: false, message: 'Ya existe un cliente con el teléfono: ' + lead.telefono + '. Puede que ya fue convertido.' };
+
+  // Crear cliente usando el caller como afiliado (para comisiones automáticas)
+  const clienteId = generateId('CLI');
+  clientesSheet.appendRow([
+    clienteId,
+    lead.nombre_negocio,      // nombre
+    lead.telefono,            // telefono
+    lead.email || '',         // email
+    '',                       // pais
+    lead.asignado_a,          // afiliado_id = caller_id ← CLAVE para comisiones
+    'nuevo',                  // estado_pipeline
+    dateStr(new Date())       // fecha_registro
+  ]);
+
+  // Registrar en historial del lead
+  registrarHistorial(lead_id, admin_id || 'admin', lead.estado_actual, lead.estado_actual,
+    '[CONVERTIDO] Lead convertido a cliente. Cliente ID: ' + clienteId);
+
+  return {
+    success: true,
+    message: 'Lead convertido a cliente correctamente. El caller recibirá comisiones por proyectos de este cliente.',
+    cliente_id: clienteId,
+    caller_id: lead.asignado_a
+  };
 }
 
 // ============================================================
