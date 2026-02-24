@@ -1,0 +1,823 @@
+// ============================================================
+//  MK DEV STUDIO – Google Apps Script Backend (ACTUALIZADO)
+//  Incluye: Afiliados + CALLER CRM con Leads y Historial
+// ============================================================
+
+const SPREADSHEET_ID = '1wipzNoW6Y2y7rYYkzRo_N7gW0v1rnX8QpAqvxux0wmU';
+
+const COMISION_DEFAULT = 30;
+
+// Estados válidos del pipeline de leads
+const PIPELINE_ESTADOS = [
+  'LEAD_ASIGNADO',
+  'PRIMER_CONTACTO',
+  'NO_CONTESTO',
+  'INTERESADO',
+  'NO_INTERESADO',
+  'REUNION_AGENDADA',
+  'REUNION_REALIZADA',
+  'PROPUESTA_ENVIADA',
+  'NEGOCIACION',
+  'PENDIENTE_VALIDACION', // CERRADO_GANADO pendiente de aprobación admin
+  'CERRADO_GANADO',
+  'CERRADO_PERDIDO'
+];
+
+// ============================================================
+//  GET
+// ============================================================
+function doGet(e) {
+  const params = e.parameter;
+  const action = params.action;
+  let result;
+
+  try {
+    switch (action) {
+      case 'getAfiliados':      result = getAfiliados(); break;
+      case 'getClientes':       result = getClientes(); break;
+      case 'getProyectos':      result = getProyectos(); break;
+      case 'getPagos':          result = getPagos(); break;
+      case 'getComisiones':     result = getComisiones(); break;
+      case 'getLeads':          result = getLeads(params.caller_id); break;
+      case 'getLeadHistorial':  result = getLeadHistorial(params.lead_id); break;
+      case 'getMetricasCaller': result = getMetricasCaller(params.caller_id); break;
+      case 'login':             result = login(params.email, params.password); break;
+      default: result = { success: false, message: 'Accion GET no reconocida: ' + action };
+    }
+  } catch (err) {
+    result = { success: false, message: 'Error interno: ' + err.message };
+  }
+
+  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+}
+
+// ============================================================
+//  POST
+// ============================================================
+function doPost(e) {
+  let body;
+  try {
+    body = JSON.parse(e.postData.contents);
+  } catch (err) {
+    return jsonResponse({ success: false, message: 'JSON invalido en el body.' });
+  }
+
+  const action = body.action;
+  let result;
+
+  try {
+    switch (action) {
+      // --- Módulo original afiliados ---
+      case 'crearCliente':           result = crearCliente(body); break;
+      case 'crearProyecto':          result = crearProyecto(body); break;
+      case 'registrarPago':          result = registrarPago(body); break;
+      case 'cambiarEstadoCliente':   result = cambiarEstadoCliente(body); break;
+      case 'cambiarEstadoProyecto':  result = cambiarEstadoProyecto(body); break;
+      case 'pagarComision':          result = pagarComision(body); break;
+
+      // --- Módulo CALLER CRM ---
+      case 'crearLead':              result = crearLead(body); break;
+      case 'actualizarLead':         result = actualizarLead(body); break;
+      case 'cambiarEstadoLead':      result = cambiarEstadoLead(body); break;
+      case 'agregarNota':            result = agregarNota(body); break;
+      case 'marcarLlamada':          result = marcarLlamada(body); break;
+      case 'agendarReunion':         result = agendarReunion(body); break;
+      case 'aprobarCerradoGanado':   result = aprobarCerradoGanado(body); break;
+      case 'rechazarCerradoGanado':  result = rechazarCerradoGanado(body); break;
+      case 'crearCaller':            result = crearCaller(body); break;
+
+      default: result = { success: false, message: 'Accion POST no reconocida: ' + action };
+    }
+  } catch (err) {
+    result = { success: false, message: 'Error interno: ' + err.message };
+  }
+
+  return jsonResponse(result);
+}
+
+function jsonResponse(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+// ============================================================
+//  HELPERS
+// ============================================================
+function getSheet(name) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    const h = ss.insertSheet(name);
+    initSheetHeaders(h, name);
+    return h;
+  }
+  return sheet;
+}
+
+function initSheetHeaders(sheet, name) {
+  const headers = {
+    'Usuarios':      ['id','nombre','email','password','rol','telefono','pais','porcentaje','estado','fecha_registro'],
+    'Clientes':      ['id','nombre','telefono','email','pais','afiliado_id','estado_pipeline','fecha_registro'],
+    'Proyectos':     ['id','cliente_id','afiliado_id','tipo_servicio','precio_total','estado','fecha_inicio','fecha_entrega','descripcion'],
+    'Pagos':         ['id','proyecto_id','monto','fecha_pago'],
+    'Comisiones':    ['id','afiliado_id','proyecto_id','monto_pagado','porcentaje','monto_comision','estado','fecha_generada','fecha_pagada'],
+    'Leads':         [
+      'id','nombre_negocio','nombre_contacto','telefono','email','nicho',
+      'estado_actual','problema_detectado','presupuesto_estimado','nivel_interes',
+      'monto_propuesto','monto_cierre','proxima_accion','fecha_proxima_accion',
+      'fecha_reunion','asignado_a','creado_por','fecha_creacion','fecha_actualizacion'
+    ],
+    'Lead_Historial': ['id','lead_id','user_id','estado_anterior','estado_nuevo','nota','fecha_cambio']
+  };
+  if (headers[name]) sheet.appendRow(headers[name]);
+}
+
+function sheetToObjects(sheet) {
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return [];
+  const headers = data[0];
+  return data.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => {
+      obj[h] = row[i] instanceof Date
+        ? Utilities.formatDate(row[i], 'America/Mexico_City', 'yyyy-MM-dd HH:mm:ss')
+        : (row[i] !== undefined && row[i] !== null ? String(row[i]) : '');
+    });
+    return obj;
+  }).filter(obj => obj.id && obj.id !== '');
+}
+
+function generateId(prefix) {
+  return prefix + '_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+}
+
+function findRowById(sheet, id) {
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id)) return i + 1;
+  }
+  return -1;
+}
+
+function getColIndex(sheet, colName) {
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  return headers.indexOf(colName);
+}
+
+function nowStr() {
+  return Utilities.formatDate(new Date(), 'America/Mexico_City', 'yyyy-MM-dd HH:mm:ss');
+}
+function dateStr(d) {
+  return Utilities.formatDate(d || new Date(), 'America/Mexico_City', 'yyyy-MM-dd');
+}
+
+// ============================================================
+//  LOGIN
+// ============================================================
+function login(email, password) {
+  if (!email || !password) return { success: false, message: 'Email y contrasena requeridos.' };
+  const usuarios = sheetToObjects(getSheet('Usuarios'));
+  const user = usuarios.find(u =>
+    u.email.toLowerCase() === email.toLowerCase() && u.password === password && u.estado === 'activo'
+  );
+  if (!user) return { success: false, message: 'Credenciales incorrectas o cuenta inactiva.' };
+  return {
+    success: true,
+    data: {
+      id: user.id,
+      nombre: user.nombre,
+      email: user.email,
+      rol: user.rol
+    }
+  };
+}
+
+// ============================================================
+//  GET — Afiliados / Clientes / Proyectos / Pagos / Comisiones
+// ============================================================
+function getAfiliados() {
+  return { success: true, data: sheetToObjects(getSheet('Usuarios')) };
+}
+function getClientes() {
+  return { success: true, data: sheetToObjects(getSheet('Clientes')) };
+}
+function getProyectos() {
+  return { success: true, data: sheetToObjects(getSheet('Proyectos')) };
+}
+function getPagos() {
+  return { success: true, data: sheetToObjects(getSheet('Pagos')) };
+}
+function getComisiones() {
+  return { success: true, data: sheetToObjects(getSheet('Comisiones')) };
+}
+
+// ============================================================
+//  GET — Leads (todos para admin / filtrado por caller_id)
+// ============================================================
+function getLeads(caller_id) {
+  const leads = sheetToObjects(getSheet('Leads'));
+  if (caller_id) {
+    return { success: true, data: leads.filter(l => l.asignado_a === caller_id) };
+  }
+  return { success: true, data: leads };
+}
+
+// ============================================================
+//  GET — Lead_Historial
+// ============================================================
+function getLeadHistorial(lead_id) {
+  if (!lead_id) return { success: false, message: 'lead_id requerido.' };
+  const historial = sheetToObjects(getSheet('Lead_Historial'));
+  return { success: true, data: historial.filter(h => h.lead_id === lead_id) };
+}
+
+// ============================================================
+//  GET — Métricas del Caller
+// ============================================================
+function getMetricasCaller(caller_id) {
+  if (!caller_id) return { success: false, message: 'caller_id requerido.' };
+  const leads = sheetToObjects(getSheet('Leads')).filter(l => l.asignado_a === caller_id);
+  const historial = sheetToObjects(getSheet('Lead_Historial')).filter(h => h.user_id === caller_id);
+  const hoy = dateStr(new Date());
+
+  const asignados = leads.length;
+  const pendientesHoy = leads.filter(l =>
+    l.fecha_proxima_accion && l.fecha_proxima_accion.substring(0,10) <= hoy &&
+    !['CERRADO_GANADO','CERRADO_PERDIDO'].includes(l.estado_actual)
+  ).length;
+
+  const llamadas_realizadas = historial.filter(h =>
+    h.nota && h.nota.toLowerCase().includes('[llamada]')
+  ).length;
+
+  const reuniones_agendadas = leads.filter(l =>
+    ['REUNION_AGENDADA','REUNION_REALIZADA'].includes(l.estado_actual)
+  ).length;
+
+  const reuniones_realizadas = leads.filter(l => l.estado_actual === 'REUNION_REALIZADA').length;
+
+  const mesActual = hoy.substring(0, 7); // yyyy-MM
+  const ventas_mes = leads.filter(l =>
+    l.estado_actual === 'CERRADO_GANADO' && l.fecha_actualizacion.substring(0, 7) === mesActual
+  ).length;
+
+  const contactados = leads.filter(l => l.estado_actual !== 'LEAD_ASIGNADO').length;
+  const tasa_contacto = asignados > 0 ? Math.round((contactados / asignados) * 100) : 0;
+
+  const cerrados = leads.filter(l => l.estado_actual === 'CERRADO_GANADO').length;
+  const tasa_cierre = contactados > 0 ? Math.round((cerrados / contactados) * 100) : 0;
+
+  const monto_cerrado = leads
+    .filter(l => l.estado_actual === 'CERRADO_GANADO' && l.monto_cierre)
+    .reduce((s, l) => s + parseFloat(l.monto_cierre || 0), 0);
+  const comision_estimada = monto_cerrado * 0.05; // 5% estimado (ajustable)
+
+  return {
+    success: true,
+    data: {
+      asignados,
+      pendientesHoy,
+      llamadas_realizadas,
+      reuniones_agendadas,
+      reuniones_realizadas,
+      ventas_mes,
+      tasa_contacto,
+      tasa_cierre,
+      comision_estimada
+    }
+  };
+}
+
+// ============================================================
+//  POST — Crear Lead (ADMIN)
+// ============================================================
+function crearLead(body) {
+  const {
+    nombre_negocio, nombre_contacto, telefono, email, nicho,
+    problema_detectado, presupuesto_estimado, nivel_interes,
+    monto_propuesto, proxima_accion, fecha_proxima_accion,
+    asignado_a, creado_por
+  } = body;
+
+  if (!nombre_negocio || !nombre_contacto || !telefono || !asignado_a)
+    return { success: false, message: 'nombre_negocio, nombre_contacto, telefono y asignado_a son requeridos.' };
+
+  // Verificar que el caller existe y tiene rol caller
+  const usuarios = sheetToObjects(getSheet('Usuarios'));
+  const caller = usuarios.find(u => u.id === asignado_a && u.rol === 'caller');
+  if (!caller) return { success: false, message: 'El usuario asignado no existe o no tiene rol de caller.' };
+
+  const sheet = getSheet('Leads');
+  const id = generateId('LEAD');
+  const ahora = nowStr();
+
+  sheet.appendRow([
+    id,
+    nombre_negocio, nombre_contacto, telefono, email || '', nicho || '',
+    'LEAD_ASIGNADO',
+    problema_detectado || '', presupuesto_estimado || '', nivel_interes || '1',
+    monto_propuesto || '', '', // monto_cierre vacío — solo admin puede editarlo después
+    proxima_accion || 'Realizar primer contacto',
+    fecha_proxima_accion || dateStr(new Date()),
+    '', // fecha_reunion
+    asignado_a,
+    creado_por || 'admin',
+    ahora, ahora
+  ]);
+
+  // Registrar en historial
+  registrarHistorial(id, asignado_a, '', 'LEAD_ASIGNADO', 'Lead creado y asignado.');
+
+  return { success: true, message: 'Lead creado y asignado a ' + caller.nombre, id };
+}
+
+// ============================================================
+//  POST — Actualizar Lead (CALLER — campos restringidos)
+// ============================================================
+function actualizarLead(body) {
+  const { lead_id, caller_id, campo, valor } = body;
+
+  if (!lead_id || !caller_id || !campo)
+    return { success: false, message: 'lead_id, caller_id y campo son requeridos.' };
+
+  // Campos que el CALLER puede editar
+  const CAMPOS_PERMITIDOS_CALLER = [
+    'nombre_negocio','nombre_contacto','telefono','email','nicho',
+    'problema_detectado','presupuesto_estimado','nivel_interes',
+    'monto_propuesto','proxima_accion','fecha_proxima_accion'
+  ];
+
+  // monto_cierre NUNCA puede ser editado por caller
+  if (!CAMPOS_PERMITIDOS_CALLER.includes(campo))
+    return { success: false, message: 'El campo "' + campo + '" no puede ser editado por el CALLER.' };
+
+  const sheet = getSheet('Leads');
+  const leads = sheetToObjects(sheet);
+  const lead = leads.find(l => l.id === lead_id);
+
+  if (!lead) return { success: false, message: 'Lead no encontrado.' };
+  if (lead.asignado_a !== caller_id) return { success: false, message: 'No tienes permiso para editar este lead.' };
+
+  const rowNum = findRowById(sheet, lead_id);
+  const colIndex = getColIndex(sheet, campo);
+  if (colIndex === -1) return { success: false, message: 'Campo no existe.' };
+
+  sheet.getRange(rowNum, colIndex + 1).setValue(valor);
+
+  // Actualizar fecha_actualizacion
+  const colActualizacion = getColIndex(sheet, 'fecha_actualizacion');
+  if (colActualizacion !== -1) sheet.getRange(rowNum, colActualizacion + 1).setValue(nowStr());
+
+  return { success: true, message: 'Lead actualizado correctamente.' };
+}
+
+// ============================================================
+//  POST — Cambiar Estado Lead (con validaciones de pipeline)
+// ============================================================
+function cambiarEstadoLead(body) {
+  const { lead_id, caller_id, nuevo_estado, nota, fecha_reunion, resumen } = body;
+
+  if (!lead_id || !caller_id || !nuevo_estado)
+    return { success: false, message: 'lead_id, caller_id y nuevo_estado son requeridos.' };
+
+  if (!PIPELINE_ESTADOS.includes(nuevo_estado))
+    return { success: false, message: 'Estado no válido: ' + nuevo_estado };
+
+  const sheet = getSheet('Leads');
+  const leads = sheetToObjects(sheet);
+  const lead = leads.find(l => l.id === lead_id);
+
+  if (!lead) return { success: false, message: 'Lead no encontrado.' };
+  if (lead.asignado_a !== caller_id) return { success: false, message: 'No tienes permiso para modificar este lead.' };
+
+  // Bloquear cambios desde estados cerrados
+  if (['CERRADO_GANADO', 'PENDIENTE_VALIDACION'].includes(lead.estado_actual))
+    return { success: false, message: 'Este lead está cerrado o pendiente de validación. Contacta al admin.' };
+
+  // ── Validaciones por estado destino ──
+
+  // REUNION_AGENDADA requiere fecha_reunion
+  if (nuevo_estado === 'REUNION_AGENDADA') {
+    if (!fecha_reunion && !lead.fecha_reunion)
+      return { success: false, message: 'Debes proporcionar una fecha y hora de reunión.' };
+  }
+
+  // INTERESADO requiere nota descriptiva
+  if (nuevo_estado === 'INTERESADO') {
+    if (!nota || nota.trim().length < 10)
+      return { success: false, message: 'Debes agregar una nota descriptiva (mín. 10 caracteres) al marcar como INTERESADO.' };
+  }
+
+  // PROPUESTA_ENVIADA requiere resumen
+  if (nuevo_estado === 'PROPUESTA_ENVIADA') {
+    if (!resumen || resumen.trim().length < 10)
+      return { success: false, message: 'Debes registrar un resumen de la propuesta (mín. 10 caracteres).' };
+  }
+
+  // CERRADO_GANADO → se guarda como PENDIENTE_VALIDACION
+  const estadoReal = nuevo_estado === 'CERRADO_GANADO' ? 'PENDIENTE_VALIDACION' : nuevo_estado;
+  const estadoAnterior = lead.estado_actual;
+  const rowNum = findRowById(sheet, lead_id);
+
+  // Actualizar estado
+  const colEstado = getColIndex(sheet, 'estado_actual');
+  sheet.getRange(rowNum, colEstado + 1).setValue(estadoReal);
+
+  // Guardar fecha_reunion si aplica
+  if (fecha_reunion) {
+    const colReunion = getColIndex(sheet, 'fecha_reunion');
+    if (colReunion !== -1) sheet.getRange(rowNum, colReunion + 1).setValue(fecha_reunion);
+  }
+
+  // Actualizar fecha_actualizacion
+  const colFechaAct = getColIndex(sheet, 'fecha_actualizacion');
+  if (colFechaAct !== -1) sheet.getRange(rowNum, colFechaAct + 1).setValue(nowStr());
+
+  // Calcular próxima acción automática según estado
+  let autoProxima = '';
+  let autoFecha = '';
+  const hoy = new Date();
+
+  if (estadoReal === 'NO_CONTESTO') {
+    const d = new Date(hoy); d.setDate(d.getDate() + 2); // +48h
+    autoProxima = 'Volver a contactar (sin respuesta)';
+    autoFecha = dateStr(d);
+  } else if (estadoReal === 'INTERESADO') {
+    const d = new Date(hoy); d.setDate(d.getDate() + 3); // max 72h
+    autoProxima = 'Seguimiento obligatorio – lead interesado';
+    autoFecha = dateStr(d);
+  } else if (estadoReal === 'PROPUESTA_ENVIADA') {
+    const d = new Date(hoy); d.setDate(d.getDate() + 3); // 3 días
+    autoProxima = 'Seguimiento automático post-propuesta';
+    autoFecha = dateStr(d);
+  }
+
+  if (autoProxima) {
+    const colPA = getColIndex(sheet, 'proxima_accion');
+    const colFPA = getColIndex(sheet, 'fecha_proxima_accion');
+    if (colPA !== -1) sheet.getRange(rowNum, colPA + 1).setValue(autoProxima);
+    if (colFPA !== -1) sheet.getRange(rowNum, colFPA + 1).setValue(autoFecha);
+  }
+
+  // Nota compuesta para historial
+  const notaHistorial = nota
+    ? nota
+    : (resumen ? '[RESUMEN] ' + resumen : 'Cambio de estado.');
+
+  registrarHistorial(lead_id, caller_id, estadoAnterior, estadoReal, notaHistorial);
+
+  const msg = nuevo_estado === 'CERRADO_GANADO'
+    ? 'Lead enviado a PENDIENTE_VALIDACION. El admin debe aprobarlo.'
+    : 'Estado actualizado a: ' + estadoReal;
+
+  return { success: true, message: msg, estado: estadoReal };
+}
+
+// ============================================================
+//  POST — Agregar Nota
+// ============================================================
+function agregarNota(body) {
+  const { lead_id, caller_id, nota, proxima_accion, fecha_proxima_accion } = body;
+
+  if (!lead_id || !caller_id || !nota)
+    return { success: false, message: 'lead_id, caller_id y nota son requeridos.' };
+  if (nota.trim().length < 5)
+    return { success: false, message: 'La nota debe tener al menos 5 caracteres.' };
+
+  const sheet = getSheet('Leads');
+  const leads = sheetToObjects(sheet);
+  const lead = leads.find(l => l.id === lead_id);
+
+  if (!lead) return { success: false, message: 'Lead no encontrado.' };
+  if (lead.asignado_a !== caller_id) return { success: false, message: 'Sin permiso.' };
+
+  const rowNum = findRowById(sheet, lead_id);
+
+  // Actualizar próxima acción si se envió
+  if (proxima_accion) {
+    const colPA = getColIndex(sheet, 'proxima_accion');
+    if (colPA !== -1) sheet.getRange(rowNum, colPA + 1).setValue(proxima_accion);
+  }
+  if (fecha_proxima_accion) {
+    const colFPA = getColIndex(sheet, 'fecha_proxima_accion');
+    if (colFPA !== -1) sheet.getRange(rowNum, colFPA + 1).setValue(fecha_proxima_accion);
+  }
+
+  // Actualizar fecha_actualizacion
+  const colFechaAct = getColIndex(sheet, 'fecha_actualizacion');
+  if (colFechaAct !== -1) sheet.getRange(rowNum, colFechaAct + 1).setValue(nowStr());
+
+  // Registrar en historial
+  registrarHistorial(lead_id, caller_id, lead.estado_actual, lead.estado_actual, nota);
+
+  return { success: true, message: 'Nota registrada correctamente.' };
+}
+
+// ============================================================
+//  POST — Marcar Llamada Realizada
+// ============================================================
+function marcarLlamada(body) {
+  const { lead_id, caller_id, nota } = body;
+  if (!lead_id || !caller_id) return { success: false, message: 'lead_id y caller_id requeridos.' };
+
+  const sheet = getSheet('Leads');
+  const leads = sheetToObjects(sheet);
+  const lead = leads.find(l => l.id === lead_id);
+
+  if (!lead) return { success: false, message: 'Lead no encontrado.' };
+  if (lead.asignado_a !== caller_id) return { success: false, message: 'Sin permiso.' };
+
+  const rowNum = findRowById(sheet, lead_id);
+  const colFechaAct = getColIndex(sheet, 'fecha_actualizacion');
+  if (colFechaAct !== -1) sheet.getRange(rowNum, colFechaAct + 1).setValue(nowStr());
+
+  const notaFinal = '[llamada] ' + (nota || 'Llamada realizada.');
+  registrarHistorial(lead_id, caller_id, lead.estado_actual, lead.estado_actual, notaFinal);
+
+  return { success: true, message: 'Llamada marcada correctamente.' };
+}
+
+// ============================================================
+//  POST — Agendar Reunión (requiere fecha + hora)
+// ============================================================
+function agendarReunion(body) {
+  const { lead_id, caller_id, fecha_reunion, nota } = body;
+
+  if (!lead_id || !caller_id || !fecha_reunion)
+    return { success: false, message: 'lead_id, caller_id y fecha_reunion son requeridos.' };
+
+  const sheet = getSheet('Leads');
+  const leads = sheetToObjects(sheet);
+  const lead = leads.find(l => l.id === lead_id);
+
+  if (!lead) return { success: false, message: 'Lead no encontrado.' };
+  if (lead.asignado_a !== caller_id) return { success: false, message: 'Sin permiso.' };
+
+  const rowNum = findRowById(sheet, lead_id);
+  const colReunion = getColIndex(sheet, 'fecha_reunion');
+  const colEstado = getColIndex(sheet, 'estado_actual');
+  const colProxima = getColIndex(sheet, 'proxima_accion');
+  const colFechaAct = getColIndex(sheet, 'fecha_actualizacion');
+
+  if (colReunion !== -1) sheet.getRange(rowNum, colReunion + 1).setValue(fecha_reunion);
+  if (colEstado !== -1) sheet.getRange(rowNum, colEstado + 1).setValue('REUNION_AGENDADA');
+  if (colProxima !== -1) sheet.getRange(rowNum, colProxima + 1).setValue('Reunión agendada: ' + fecha_reunion);
+  if (colFechaAct !== -1) sheet.getRange(rowNum, colFechaAct + 1).setValue(nowStr());
+
+  const notaFinal = (nota || 'Reunión agendada.') + ' | Fecha: ' + fecha_reunion;
+  registrarHistorial(lead_id, caller_id, lead.estado_actual, 'REUNION_AGENDADA', notaFinal);
+
+  return { success: true, message: 'Reunión agendada para: ' + fecha_reunion };
+}
+
+// ============================================================
+//  POST — Aprobar CERRADO_GANADO (ADMIN)
+// ============================================================
+function aprobarCerradoGanado(body) {
+  const { lead_id, admin_id, monto_cierre } = body;
+  if (!lead_id) return { success: false, message: 'lead_id es requerido.' };
+
+  const sheet = getSheet('Leads');
+  const leads = sheetToObjects(sheet);
+  const lead = leads.find(l => l.id === lead_id);
+
+  if (!lead) return { success: false, message: 'Lead no encontrado.' };
+  if (lead.estado_actual !== 'PENDIENTE_VALIDACION')
+    return { success: false, message: 'El lead no está en estado PENDIENTE_VALIDACION.' };
+
+  const rowNum = findRowById(sheet, lead_id);
+  const colEstado = getColIndex(sheet, 'estado_actual');
+  const colMontoCierre = getColIndex(sheet, 'monto_cierre');
+  const colFechaAct = getColIndex(sheet, 'fecha_actualizacion');
+
+  sheet.getRange(rowNum, colEstado + 1).setValue('CERRADO_GANADO');
+  if (monto_cierre && colMontoCierre !== -1)
+    sheet.getRange(rowNum, colMontoCierre + 1).setValue(parseFloat(monto_cierre));
+  if (colFechaAct !== -1) sheet.getRange(rowNum, colFechaAct + 1).setValue(nowStr());
+
+  registrarHistorial(lead_id, admin_id || 'admin', 'PENDIENTE_VALIDACION', 'CERRADO_GANADO',
+    'Aprobado por admin' + (monto_cierre ? '. Monto cierre: $' + monto_cierre : '.'));
+
+  return { success: true, message: 'Lead aprobado como CERRADO_GANADO.' };
+}
+
+// ============================================================
+//  POST — Rechazar CERRADO_GANADO (ADMIN → regresa a NEGOCIACION)
+// ============================================================
+function rechazarCerradoGanado(body) {
+  const { lead_id, admin_id, motivo } = body;
+  if (!lead_id) return { success: false, message: 'lead_id es requerido.' };
+
+  const sheet = getSheet('Leads');
+  const leads = sheetToObjects(sheet);
+  const lead = leads.find(l => l.id === lead_id);
+
+  if (!lead) return { success: false, message: 'Lead no encontrado.' };
+  if (lead.estado_actual !== 'PENDIENTE_VALIDACION')
+    return { success: false, message: 'El lead no está en PENDIENTE_VALIDACION.' };
+
+  const rowNum = findRowById(sheet, lead_id);
+  const colEstado = getColIndex(sheet, 'estado_actual');
+  const colFechaAct = getColIndex(sheet, 'fecha_actualizacion');
+
+  sheet.getRange(rowNum, colEstado + 1).setValue('NEGOCIACION');
+  if (colFechaAct !== -1) sheet.getRange(rowNum, colFechaAct + 1).setValue(nowStr());
+
+  registrarHistorial(lead_id, admin_id || 'admin', 'PENDIENTE_VALIDACION', 'NEGOCIACION',
+    'Rechazado por admin. ' + (motivo || ''));
+
+  return { success: true, message: 'Lead devuelto a NEGOCIACION.' };
+}
+
+// ============================================================
+//  POST — Crear Caller (ADMIN)
+// ============================================================
+function crearCaller(body) {
+  const { nombre, email, password, telefono, pais } = body;
+  if (!nombre || !email || !password)
+    return { success: false, message: 'nombre, email y password son requeridos.' };
+
+  const sheet = getSheet('Usuarios');
+  const usuarios = sheetToObjects(sheet);
+  if (usuarios.find(u => u.email.toLowerCase() === email.toLowerCase()))
+    return { success: false, message: 'Ya existe un usuario con ese email.' };
+
+  const id = generateId('USR');
+  sheet.appendRow([
+    id, nombre, email, password, 'caller',
+    telefono || '', pais || '', 0, 'activo',
+    dateStr(new Date())
+  ]);
+
+  return { success: true, message: 'Caller "' + nombre + '" creado correctamente.', id };
+}
+
+// ============================================================
+//  HELPER — Registrar en Lead_Historial
+// ============================================================
+function registrarHistorial(lead_id, user_id, estado_anterior, estado_nuevo, nota) {
+  const sheet = getSheet('Lead_Historial');
+  sheet.appendRow([
+    generateId('HIST'),
+    lead_id,
+    user_id,
+    estado_anterior,
+    estado_nuevo,
+    nota || '',
+    nowStr()
+  ]);
+}
+
+// ============================================================
+//  POST — Afiliados (módulo original sin cambios)
+// ============================================================
+function crearCliente(body) {
+  const { nombre, telefono, email, pais, afiliado_id, estado_pipeline } = body;
+  if (!nombre || !telefono || !afiliado_id)
+    return { success: false, message: 'Nombre, telefono y afiliado son requeridos.' };
+
+  const sheet = getSheet('Clientes');
+  const clientes = sheetToObjects(sheet);
+  if (clientes.find(c => c.telefono === String(telefono)))
+    return { success: false, message: 'Ya existe un cliente con el telefono: ' + telefono };
+
+  const id = generateId('CLI');
+  sheet.appendRow([id, nombre, telefono, email||'', pais||'', afiliado_id, estado_pipeline||'nuevo',
+    dateStr(new Date())]);
+
+  return { success: true, message: 'Cliente "' + nombre + '" registrado.', id };
+}
+
+function crearProyecto(body) {
+  const { cliente_id, afiliado_id, tipo_servicio, precio_total, fecha_inicio, fecha_entrega, descripcion } = body;
+  if (!cliente_id || !tipo_servicio)
+    return { success: false, message: 'cliente_id y tipo_servicio son requeridos.' };
+
+  const sheet = getSheet('Proyectos');
+  const id = generateId('PROY');
+  sheet.appendRow([
+    id, cliente_id, afiliado_id || '', tipo_servicio,
+    parseFloat(precio_total) || 0, 'pendiente',
+    fecha_inicio || dateStr(new Date()), fecha_entrega || '', descripcion || ''
+  ]);
+  return { success: true, message: 'Proyecto enviado como propuesta pendiente de aprobacion.', id };
+}
+
+function cambiarEstadoProyecto(body) {
+  const { proyecto_id, nuevo_estado } = body;
+  if (!proyecto_id || !nuevo_estado)
+    return { success: false, message: 'proyecto_id y nuevo_estado son requeridos.' };
+
+  const sheet = getSheet('Proyectos');
+  const rowNum = findRowById(sheet, proyecto_id);
+  if (rowNum === -1) return { success: false, message: 'Proyecto no encontrado.' };
+
+  const colIndex = getColIndex(sheet, 'estado');
+  if (colIndex === -1) return { success: false, message: 'Columna "estado" no encontrada.' };
+  sheet.getRange(rowNum, colIndex + 1).setValue(nuevo_estado);
+  return { success: true, message: 'Estado del proyecto actualizado a: ' + nuevo_estado };
+}
+
+function registrarPago(body) {
+  const { proyecto_id, monto, fecha_pago } = body;
+  if (!proyecto_id || !monto || !fecha_pago)
+    return { success: false, message: 'proyecto_id, monto y fecha_pago son requeridos.' };
+
+  const montoNum = parseFloat(monto);
+  if (montoNum <= 0) return { success: false, message: 'El monto debe ser mayor a 0.' };
+
+  const sheetProyectos = getSheet('Proyectos');
+  const proyectos = sheetToObjects(sheetProyectos);
+  const proyecto = proyectos.find(p => p.id === proyecto_id);
+  if (!proyecto) return { success: false, message: 'Proyecto no encontrado.' };
+
+  getSheet('Pagos').appendRow([generateId('PAGO'), proyecto_id, montoNum, fecha_pago]);
+
+  if (proyecto.afiliado_id) {
+    const usuarios = sheetToObjects(getSheet('Usuarios'));
+    const afiliado = usuarios.find(u => u.id === proyecto.afiliado_id);
+    const porcentaje = afiliado && afiliado.porcentaje ? parseFloat(afiliado.porcentaje) : COMISION_DEFAULT;
+    const montoComision = montoNum * (porcentaje / 100);
+    getSheet('Comisiones').appendRow([
+      generateId('COM'), proyecto.afiliado_id, proyecto_id, montoNum, porcentaje,
+      montoComision, 'pendiente', dateStr(new Date()), ''
+    ]);
+  }
+  return { success: true, message: 'Pago de $' + montoNum.toFixed(2) + ' registrado. Comision generada.' };
+}
+
+function cambiarEstadoCliente(body) {
+  const { cliente_id, nuevo_estado } = body;
+  if (!cliente_id || !nuevo_estado)
+    return { success: false, message: 'cliente_id y nuevo_estado son requeridos.' };
+
+  const sheet = getSheet('Clientes');
+  const rowNum = findRowById(sheet, cliente_id);
+  if (rowNum === -1) return { success: false, message: 'Cliente no encontrado.' };
+
+  const colIndex = getColIndex(sheet, 'estado_pipeline');
+  if (colIndex === -1) return { success: false, message: 'Columna estado_pipeline no encontrada.' };
+  sheet.getRange(rowNum, colIndex + 1).setValue(nuevo_estado);
+  return { success: true, message: 'Estado actualizado a: ' + nuevo_estado };
+}
+
+function pagarComision(body) {
+  const { comision_id, fecha_pagada } = body;
+  if (!comision_id) return { success: false, message: 'comision_id es requerido.' };
+
+  const sheet = getSheet('Comisiones');
+  const rowNum = findRowById(sheet, comision_id);
+  if (rowNum === -1) return { success: false, message: 'Comision no encontrada.' };
+
+  const colEstado = getColIndex(sheet, 'estado');
+  const colFecha  = getColIndex(sheet, 'fecha_pagada');
+  sheet.getRange(rowNum, colEstado + 1).setValue('pagada');
+  if (colFecha !== -1)
+    sheet.getRange(rowNum, colFecha + 1).setValue(fecha_pagada || dateStr(new Date()));
+
+  return { success: true, message: 'Comision marcada como pagada.' };
+}
+
+// ============================================================
+//  SETUP INICIAL — Ejecutar UNA VEZ desde el editor de GAS
+// ============================================================
+function setupInicial() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const hojasNecesarias = [
+    'Usuarios', 'Clientes', 'Proyectos', 'Pagos', 'Comisiones',
+    'Leads', 'Lead_Historial'
+  ];
+
+  hojasNecesarias.forEach(nombre => {
+    if (!ss.getSheetByName(nombre)) {
+      const h = ss.insertSheet(nombre);
+      initSheetHeaders(h, nombre);
+      Logger.log('Hoja creada: ' + nombre);
+    } else {
+      Logger.log('Hoja ya existe: ' + nombre);
+    }
+  });
+
+  // Verificar columna descripcion en Proyectos
+  const shProyectos = ss.getSheetByName('Proyectos');
+  if (shProyectos) {
+    const headers = shProyectos.getRange(1, 1, 1, shProyectos.getLastColumn()).getValues()[0];
+    if (!headers.includes('descripcion')) {
+      shProyectos.getRange(1, shProyectos.getLastColumn() + 1).setValue('descripcion');
+      Logger.log('Columna "descripcion" agregada a Proyectos.');
+    }
+  }
+
+  // Crear admin por defecto si no existe
+  const sheetUsuarios = ss.getSheetByName('Usuarios');
+  const data = sheetUsuarios.getDataRange().getValues();
+  if (data.length <= 1) {
+    sheetUsuarios.appendRow([
+      'USR_admin', 'Admin MK Dev', 'admin@mkdev.com', 'admin123',
+      'admin', '', '', 30, 'activo', dateStr(new Date())
+    ]);
+    Logger.log('Admin creado: admin@mkdev.com / admin123');
+  }
+
+  Logger.log('Setup completado.');
+  SpreadsheetApp.getUi().alert('✅ Setup completado. Hojas: Usuarios, Clientes, Proyectos, Pagos, Comisiones, Leads, Lead_Historial');
+}

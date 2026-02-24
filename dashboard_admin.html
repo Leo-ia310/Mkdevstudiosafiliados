@@ -112,21 +112,21 @@
               <option value="cancelado">Cancelado</option>
             </select>
           </div>
-            <div class="form-group">
-              <label>Fecha inicio</label>
-              <input type="date" id="cp_fecha_inicio" />
-            </div>
-            <div class="form-group">
-              <label>Fecha entrega estimada</label>
-              <input type="date" id="cp_fecha_entrega" />
-            </div>
+          <div class="form-group">
+            <label>Fecha inicio</label>
+            <input type="date" id="cp_fecha_inicio" />
           </div>
           <div class="form-group">
-            <label>Descripción del proyecto</label>
-            <textarea id="cp_descripcion" rows="4" placeholder="Requerimientos, contexto, referencias del cliente..."
-              style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px 14px;color:var(--text-primary);outline:none;font-size:14px;font-family:inherit;resize:vertical;line-height:1.6;box-sizing:border-box;"></textarea>
+            <label>Fecha entrega estimada</label>
+            <input type="date" id="cp_fecha_entrega" />
           </div>
         </div>
+        <div class="form-group">
+          <label>Descripción del proyecto</label>
+          <textarea id="cp_descripcion" rows="4" placeholder="Requerimientos, contexto, referencias del cliente..."
+            style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px 14px;color:var(--text-primary);outline:none;font-size:14px;font-family:inherit;resize:vertical;line-height:1.6;box-sizing:border-box;"></textarea>
+        </div>
+      </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('modalCrearProyecto')">Cancelar</button>
         <button class="btn btn-primary" onclick="crearProyecto()">Crear proyecto</button>
@@ -284,6 +284,16 @@
         <div class="nav-section-title">Afiliados</div>
         <div class="nav-item" onclick="showSection('afiliados')" id="nav-afiliados">
           <i data-lucide="handshake" class="nav-icon"></i> Afiliados
+        </div>
+
+        <div class="nav-section-title">CRM Leads</div>
+        <div class="nav-item" onclick="showSection('leads')" id="nav-leads">
+          <i data-lucide="phone-call" class="nav-icon"></i> Leads CRM
+          <span id="admin_badge_leads"
+            style="display:none;margin-left:auto;background:#facc15;color:#000;border-radius:10px;font-size:10px;padding:1px 6px;font-weight:700"></span>
+        </div>
+        <div class="nav-item" onclick="showSection('callers')" id="nav-callers">
+          <i data-lucide="headphones" class="nav-icon"></i> Callers
         </div>
       </nav>
 
@@ -516,18 +526,18 @@
             <div class="table-wrapper">
               <table>
                 <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Cliente</th>
-                      <th>Afiliado</th>
-                      <th>Servicio</th>
-                      <th>Precio</th>
-                      <th>Estado</th>
-                      <th>Descripción</th>
-                      <th>Inicio</th>
-                      <th>Entrega</th>
-                      <th>Acciones</th>
-                    </tr>
+                  <tr>
+                    <th>ID</th>
+                    <th>Cliente</th>
+                    <th>Afiliado</th>
+                    <th>Servicio</th>
+                    <th>Precio</th>
+                    <th>Estado</th>
+                    <th>Descripción</th>
+                    <th>Inicio</th>
+                    <th>Entrega</th>
+                    <th>Acciones</th>
+                  </tr>
                 </thead>
                 <tbody id="tablaProyectos">
                   <tr>
@@ -653,15 +663,229 @@
           </div>
         </div>
 
+
+        <!-- ======= LEADS CRM ======= -->
+        <div id="section-leads" class="section-tabs">
+
+          <!-- Pendientes de validación -->
+          <div class="card mb-16" id="cardPendientesValidacion" style="display:none">
+            <div class="card-header">
+              <div>
+                <div class="card-title">⚡ Leads Pendientes de Aprobación</div>
+                <div class="card-subtitle">Callers marcaron estos leads como CERRADO_GANADO y esperan tu validación
+                </div>
+              </div>
+            </div>
+            <div id="tablaPendientesValidacion"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Todos los Leads</div>
+                <div class="card-subtitle" id="leadsCount">Cargando...</div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="openModal('modalCrearLead')">
+                <i data-lucide="plus" style="width:14px;height:14px"></i> Nuevo Lead
+              </button>
+            </div>
+            <div class="search-bar">
+              <div class="search-input-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchLeadsAdmin" placeholder="Buscar lead..." oninput="filtrarLeadsAdmin()" />
+              </div>
+              <select id="filterEstadoLeadAdmin" onchange="filtrarLeadsAdmin()"
+                style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:9px 14px;color:var(--text-primary);outline:none">
+                <option value="">Todos los estados</option>
+                <option value="LEAD_ASIGNADO">Lead Asignado</option>
+                <option value="PRIMER_CONTACTO">Primer Contacto</option>
+                <option value="NO_CONTESTO">No Contestó</option>
+                <option value="INTERESADO">Interesado</option>
+                <option value="REUNION_AGENDADA">Reunión Agendada</option>
+                <option value="PROPUESTA_ENVIADA">Propuesta Enviada</option>
+                <option value="NEGOCIACION">Negociación</option>
+                <option value="PENDIENTE_VALIDACION">Pendiente Validación ⚡</option>
+                <option value="CERRADO_GANADO">Cerrado Ganado</option>
+                <option value="CERRADO_PERDIDO">Cerrado Perdido</option>
+              </select>
+              <select id="filterCallerAdmin" onchange="filtrarLeadsAdmin()"
+                style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:9px 14px;color:var(--text-primary);outline:none">
+                <option value="">Todos los callers</option>
+              </select>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Negocio / Contacto</th>
+                    <th>Caller</th>
+                    <th>Estado</th>
+                    <th>Nicho</th>
+                    <th>Presupuesto</th>
+                    <th>Próxima Acción</th>
+                    <th>Fecha</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaLeadsAdmin">
+                  <tr>
+                    <td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)">Cargando...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ======= CALLERS ======= -->
+        <div id="section-callers" class="section-tabs">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Callers</div>
+                <div class="card-subtitle" id="callersCount">Cargando...</div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="openModal('modalCrearCaller')">
+                <i data-lucide="user-plus" style="width:14px;height:14px"></i> Nuevo Caller
+              </button>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Teléfono</th>
+                    <th>Estado</th>
+                    <th>Leads Asignados</th>
+                    <th>Registro</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaCallers">
+                  <tr>
+                    <td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted)">Cargando...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
       </div><!-- /page-content -->
     </div><!-- /main-content -->
   </div><!-- /app-layout -->
+
+  <!-- ===== MODALES LEADS/CALLERS ===== -->
+
+  <!-- Modal: Crear Lead -->
+  <div class="modal-backdrop" id="modalCrearLead">
+    <div class="modal" style="max-width:680px">
+      <div class="modal-header">
+        <h3>Crear Nuevo Lead</h3><button class="modal-close" onclick="closeModal('modalCrearLead')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="alertCrearLead"></div>
+        <div class="grid-2">
+          <div class="form-group"><label>Nombre del negocio *</label><input type="text" id="cl_negocio"
+              placeholder="Ej. Restaurante El Buen Sabor" /></div>
+          <div class="form-group"><label>Nombre del contacto *</label><input type="text" id="cl_contacto"
+              placeholder="Juan García" /></div>
+          <div class="form-group"><label>Teléfono *</label><input type="text" id="cl_telefono"
+              placeholder="+52 55 0000 0000" /></div>
+          <div class="form-group"><label>Email</label><input type="email" id="cl_email"
+              placeholder="contacto@negocio.com" /></div>
+          <div class="form-group"><label>Nicho / Industria</label><input type="text" id="cl_nicho"
+              placeholder="Ej. Restaurante, Tienda, Consultora" /></div>
+          <div class="form-group"><label>Presupuesto estimado</label><input type="number" id="cl_presupuesto"
+              placeholder="0.00" min="0" step="0.01" /></div>
+          <div class="form-group" style="grid-column:1/-1"><label>Problema detectado</label><textarea id="cl_problema"
+              rows="2" placeholder="Describe el problema o necesidad del prospecto..."
+              style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;color:var(--text-primary);font-family:inherit;font-size:14px;resize:vertical;outline:none;box-sizing:border-box"></textarea>
+          </div>
+          <div class="form-group"><label>Monto propuesto</label><input type="number" id="cl_monto" placeholder="0.00"
+              min="0" step="0.01" /></div>
+          <div class="form-group"><label>Nivel de interés (1–5)</label><select id="cl_nivel">
+              <option value="1">1 – Muy bajo</option>
+              <option value="2">2 – Bajo</option>
+              <option value="3" selected>3 – Medio</option>
+              <option value="4">4 – Alto</option>
+              <option value="5">5 – Muy alto</option>
+            </select></div>
+          <div class="form-group" style="grid-column:1/-1"><label>Asignar a Caller *</label><select id="cl_caller">
+              <option value="">Seleccionar caller...</option>
+            </select></div>
+          <div class="form-group"><label>Próxima acción</label><input type="text" id="cl_proxima"
+              placeholder="Realizar primer contacto" /></div>
+          <div class="form-group"><label>Fecha próxima acción</label><input type="date" id="cl_fecha_proxima" /></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalCrearLead')">Cancelar</button>
+        <button class="btn btn-primary" onclick="crearLead()">Crear y Asignar Lead</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Crear Caller -->
+  <div class="modal-backdrop" id="modalCrearCaller">
+    <div class="modal" style="max-width:500px">
+      <div class="modal-header">
+        <h3>Crear Caller</h3><button class="modal-close" onclick="closeModal('modalCrearCaller')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="alertCrearCaller"></div>
+        <div class="grid-2">
+          <div class="form-group"><label>Nombre completo *</label><input type="text" id="cc2_nombre"
+              placeholder="Ana López" /></div>
+          <div class="form-group"><label>Email *</label><input type="email" id="cc2_email"
+              placeholder="caller@mkdev.com" /></div>
+          <div class="form-group"><label>Contraseña *</label><input type="password" id="cc2_password"
+              placeholder="Mínimo 8 caracteres" /></div>
+          <div class="form-group"><label>Teléfono</label><input type="text" id="cc2_telefono"
+              placeholder="+52 55 0000 0000" /></div>
+          <div class="form-group" style="grid-column:1/-1"><label>País</label><input type="text" id="cc2_pais"
+              placeholder="México" /></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalCrearCaller')">Cancelar</button>
+        <button class="btn btn-primary" onclick="crearCaller()">Crear Caller</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Aprobar / Rechazar Lead -->
+  <div class="modal-backdrop" id="modalAprobarLead">
+    <div class="modal" style="max-width:540px">
+      <div class="modal-header">
+        <h3>⚡ Validar Lead Cerrado</h3><button class="modal-close" onclick="closeModal('modalAprobarLead')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="alertAprobarLead"></div>
+        <input type="hidden" id="apr_lead_id" />
+        <div id="apr_lead_info" class="mb-16"></div>
+        <div class="form-group">
+          <label>Monto de cierre final (solo admin puede editar)</label>
+          <input type="number" id="apr_monto_cierre" placeholder="0.00" min="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>Motivo de rechazo (si rechazas)</label>
+          <input type="text" id="apr_motivo_rechazo" placeholder="Ej. Falta información, monto no aprobado..." />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalAprobarLead')">Cancelar</button>
+        <button class="btn btn-danger btn-sm" onclick="rechazarLead()">✕ Rechazar</button>
+        <button class="btn btn-success" onclick="aprobarLead()">✓ Aprobar Cierre</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     // ============================================================
     //  CONFIG
     // ============================================================
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbztEzTUHzTRdQIVApVUxpAiBmbzcYagAjrOA95DoRcALuoWe091P8lpOtCnZZZvC3Uk_g/exec';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw-iP17hCuHwxib6VQRc-bzJRKoylO0v9rSJJ5eihYPUBC704UlAjWyaJSSNQa8p1pfiA/exec';
 
     // ============================================================
     //  STATE
@@ -671,6 +895,7 @@
     let ALL_PAGOS = [];
     let ALL_COMISIONES = [];
     let ALL_AFILIADOS = [];
+    let ALL_LEADS = [];
     let currentSection = 'dashboard';
 
     // ============================================================
@@ -760,7 +985,9 @@
       proyectos: { title: 'Proyectos', sub: 'Gestión de proyectos' },
       pagos: { title: 'Pagos', sub: 'Historial de pagos recibidos' },
       comisiones: { title: 'Comisiones', sub: 'Comisiones de afiliados' },
-      afiliados: { title: 'Afiliados', sub: 'Gestión de afiliados' }
+      afiliados: { title: 'Afiliados', sub: 'Gestión de afiliados' },
+      leads: { title: 'Leads CRM', sub: 'Gestión de leads y pipeline de callers' },
+      callers: { title: 'Callers', sub: 'Gestión del equipo de callers' }
     };
 
     function showSection(name) {
@@ -780,6 +1007,8 @@
       if (name === 'pagos') renderTablaPagos();
       if (name === 'comisiones') renderTablaComisiones();
       if (name === 'afiliados') renderTablaAfiliados();
+      if (name === 'leads') renderTablaLeadsAdmin();
+      if (name === 'callers') renderTablaCallers();
     }
 
     // ============================================================
@@ -788,12 +1017,13 @@
     async function cargarTodo() {
       setLoading(true, 'Cargando datos...');
       try {
-        const [resAfiliados, resClientes, resProyectos, resPagos, resComisiones] = await Promise.all([
+        const [resAfiliados, resClientes, resProyectos, resPagos, resComisiones, resLeads] = await Promise.all([
           apiCall({ action: 'getAfiliados' }),
           apiCall({ action: 'getClientes' }),
           apiCall({ action: 'getProyectos' }),
           apiCall({ action: 'getPagos' }),
-          apiCall({ action: 'getComisiones' })
+          apiCall({ action: 'getComisiones' }),
+          apiCall({ action: 'getLeads' })
         ]);
 
         ALL_AFILIADOS = resAfiliados.data || [];
@@ -801,11 +1031,14 @@
         ALL_PROYECTOS = resProyectos.data || [];
         ALL_PAGOS = resPagos.data || [];
         ALL_COMISIONES = resComisiones.data || [];
+        ALL_LEADS = resLeads.data || [];
 
         renderDashboard();
         poblarSelectAfiliados();
         poblarSelectClientes();
         poblarSelectProyectos();
+        poblarSelectCallers();
+        actualizarBadgeLeads();
 
       } catch (err) {
         console.error(err);
@@ -1338,24 +1571,24 @@
       }
     }
 
-      function limpiarFormCrearProyecto() {
-        ['cp_tipo_servicio', 'cp_precio_total', 'cp_fecha_inicio', 'cp_fecha_entrega', 'cp_descripcion'].forEach(id => {
-          const el = document.getElementById(id); if (el) el.value = '';
-        });
-        document.getElementById('cp_cliente').value = '';
-        document.getElementById('cp_estado').value = 'activo';
-        document.getElementById('alertCrearProyecto').innerHTML = '';
-      }
+    function limpiarFormCrearProyecto() {
+      ['cp_tipo_servicio', 'cp_precio_total', 'cp_fecha_inicio', 'cp_fecha_entrega', 'cp_descripcion'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+      });
+      document.getElementById('cp_cliente').value = '';
+      document.getElementById('cp_estado').value = 'activo';
+      document.getElementById('alertCrearProyecto').innerHTML = '';
+    }
 
-      // --- Ver Proyecto (descripcion completa) ---
-      function verProyecto(proyectoId) {
-        const p = ALL_PROYECTOS.find(x => x.id === proyectoId);
-        if (!p) return;
-        const cl = ALL_CLIENTES.find(c => c.id === p.cliente_id);
-        const af = ALL_AFILIADOS.find(a => a.id === p.afiliado_id);
-        const isPendiente = p.estado === 'pendiente';
+    // --- Ver Proyecto (descripcion completa) ---
+    function verProyecto(proyectoId) {
+      const p = ALL_PROYECTOS.find(x => x.id === proyectoId);
+      if (!p) return;
+      const cl = ALL_CLIENTES.find(c => c.id === p.cliente_id);
+      const af = ALL_AFILIADOS.find(a => a.id === p.afiliado_id);
+      const isPendiente = p.estado === 'pendiente';
 
-        document.getElementById('modalVerProyectoBody').innerHTML = `
+      document.getElementById('modalVerProyectoBody').innerHTML = `
           <div class="grid-2 mb-16">
             <div><div class="text-sm text-muted">Cliente</div><div class="fw-600 mt-4">${cl ? cl.nombre : p.cliente_id}</div></div>
             <div><div class="text-sm text-muted">Afiliado</div><div class="fw-600 mt-4">${af ? af.nombre : (p.afiliado_id || '–')}</div></div>
@@ -1363,8 +1596,8 @@
             <div><div class="text-sm text-muted">Precio</div><div class="fw-700 text-accent mt-4">${formatMoney(p.precio_total)}</div></div>
             <div><div class="text-sm text-muted">Estado</div><div class="mt-4">
               ${isPendiente
-                ? '<span class="badge" style="background:rgba(255,193,7,0.15);color:#FFD580;border:1px solid rgba(255,193,7,0.2);">⏳ Pendiente aprobación</span>'
-                : `<span class="badge badge-${p.estado}">${p.estado}</span>`}
+          ? '<span class="badge" style="background:rgba(255,193,7,0.15);color:#FFD580;border:1px solid rgba(255,193,7,0.2);">⏳ Pendiente aprobación</span>'
+          : `<span class="badge badge-${p.estado}">${p.estado}</span>`}
             </div></div>
             <div><div class="text-sm text-muted">Fecha inicio</div><div class="fw-600 mt-4">${formatDate(p.fecha_inicio)}</div></div>
             <div><div class="text-sm text-muted">Fecha entrega</div><div class="fw-600 mt-4">${formatDate(p.fecha_entrega)}</div></div>
@@ -1377,37 +1610,37 @@
           ` : '<p class="text-muted text-sm">Sin descripción.</p>'}
         `;
 
-        const footer = document.getElementById('modalVerProyectoFooter');
-        footer.innerHTML = `<button class="btn btn-secondary" onclick="closeModal('modalVerProyecto')">Cerrar</button>`;
-        if (isPendiente) {
-          footer.innerHTML += `<button class="btn btn-success" onclick="aprobarProyecto('${p.id}', '${escapeHtml(p.tipo_servicio)}'); closeModal('modalVerProyecto');">✓ Aprobar proyecto</button>`;
-        }
-
-        openModal('modalVerProyecto');
+      const footer = document.getElementById('modalVerProyectoFooter');
+      footer.innerHTML = `<button class="btn btn-secondary" onclick="closeModal('modalVerProyecto')">Cerrar</button>`;
+      if (isPendiente) {
+        footer.innerHTML += `<button class="btn btn-success" onclick="aprobarProyecto('${p.id}', '${escapeHtml(p.tipo_servicio)}'); closeModal('modalVerProyecto');">✓ Aprobar proyecto</button>`;
       }
 
-      // --- Aprobar Proyecto (pendiente → activo) ---
-      async function aprobarProyecto(proyectoId, tipoServicio) {
-        if (!confirm(`¿Aprobar el proyecto "${tipoServicio}"? Cambiará a estado "activo".`)) return;
+      openModal('modalVerProyecto');
+    }
 
-        setLoading(true, 'Aprobando proyecto...');
-        try {
-          const res = await apiPost('cambiarEstadoProyecto', {
-            proyecto_id: proyectoId,
-            nuevo_estado: 'activo'
-          });
-          if (res.success) {
-            showToast('success', 'Proyecto aprobado', `"${tipoServicio}" ahora está activo.`);
-            await cargarTodo();
-          } else {
-            showToast('error', 'Error', res.message || 'No se pudo aprobar el proyecto.');
-          }
-        } catch (err) {
-          showToast('error', 'Error de conexión', 'Inténtalo de nuevo.');
-        } finally {
-          setLoading(false);
+    // --- Aprobar Proyecto (pendiente → activo) ---
+    async function aprobarProyecto(proyectoId, tipoServicio) {
+      if (!confirm(`¿Aprobar el proyecto "${tipoServicio}"? Cambiará a estado "activo".`)) return;
+
+      setLoading(true, 'Aprobando proyecto...');
+      try {
+        const res = await apiPost('cambiarEstadoProyecto', {
+          proyecto_id: proyectoId,
+          nuevo_estado: 'activo'
+        });
+        if (res.success) {
+          showToast('success', 'Proyecto aprobado', `"${tipoServicio}" ahora está activo.`);
+          await cargarTodo();
+        } else {
+          showToast('error', 'Error', res.message || 'No se pudo aprobar el proyecto.');
         }
+      } catch (err) {
+        showToast('error', 'Error de conexión', 'Inténtalo de nuevo.');
+      } finally {
+        setLoading(false);
       }
+    }
 
     // --- Registrar Pago ---
     async function registrarPago() {
@@ -1581,6 +1814,216 @@
 
     function escapeHtml(str) {
       return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    // ============================================================
+    //  LEADS CRM — ADMIN
+    // ============================================================
+
+    function actualizarBadgeLeads() {
+      const n = ALL_LEADS.filter(l => l.estado_actual === 'PENDIENTE_VALIDACION').length;
+      const b = document.getElementById('admin_badge_leads');
+      b.style.display = n > 0 ? 'inline' : 'none';
+      b.textContent = n;
+    }
+
+    function poblarSelectCallers() {
+      const callers = ALL_AFILIADOS.filter(a => a.rol === 'caller' && a.estado === 'activo');
+      const sel = document.getElementById('cl_caller');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">Seleccionar caller...</option>';
+      callers.forEach(c => { sel.innerHTML += `<option value="${c.id}">${c.nombre}</option>`; });
+
+      const filt = document.getElementById('filterCallerAdmin');
+      if (!filt) return;
+      filt.innerHTML = '<option value="">Todos los callers</option>';
+      callers.forEach(c => { filt.innerHTML += `<option value="${c.id}">${c.nombre}</option>`; });
+    }
+
+    function renderTablaLeadsAdmin() {
+      document.getElementById('leadsCount').textContent = `${ALL_LEADS.length} leads registrados`;
+      // render pendientes validacion
+      const pend = ALL_LEADS.filter(l => l.estado_actual === 'PENDIENTE_VALIDACION');
+      const cardPend = document.getElementById('cardPendientesValidacion');
+      cardPend.style.display = pend.length > 0 ? 'block' : 'none';
+      if (pend.length > 0) {
+        document.getElementById('tablaPendientesValidacion').innerHTML = `
+          <div class="table-wrapper"><table><thead><tr><th>Negocio</th><th>Contacto</th><th>Caller</th><th>Monto Propuesto</th><th>Acciones</th></tr></thead><tbody>
+          ${pend.map(l => {
+          const caller = ALL_AFILIADOS.find(a => a.id === l.asignado_a);
+          return `<tr style="background:rgba(250,204,21,.04)">
+              <td class="fw-600">${escapeHtml(l.nombre_negocio)}</td>
+              <td>${escapeHtml(l.nombre_contacto)}</td>
+              <td>${caller ? caller.nombre : l.asignado_a}</td>
+              <td class="fw-700 text-accent">${l.monto_propuesto ? formatMoney(l.monto_propuesto) : '–'}</td>
+              <td><button class="btn btn-success btn-sm" onclick="abrirAprobarLead('${l.id}')">⚡ Validar</button></td>
+            </tr>`;
+        }).join('')}
+          </tbody></table></div>`;
+      }
+      filtrarLeadsAdmin();
+    }
+
+    function filtrarLeadsAdmin() {
+      const q = (document.getElementById('searchLeadsAdmin').value || '').toLowerCase();
+      const est = document.getElementById('filterEstadoLeadAdmin').value;
+      const cid = document.getElementById('filterCallerAdmin').value;
+      let data = ALL_LEADS.filter(l => {
+        const ms = !q || [l.nombre_negocio, l.nombre_contacto, l.telefono, l.nicho].some(f => (f || '').toLowerCase().includes(q));
+        const me = !est || l.estado_actual === est;
+        const mc = !cid || l.asignado_a === cid;
+        return ms && me && mc;
+      });
+      const tbody = document.getElementById('tablaLeadsAdmin');
+      const HOY = new Date().toISOString().split('T')[0];
+      if (data.length === 0) { tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted)">Sin leads</td></tr>`; return; }
+      tbody.innerHTML = data.map(l => {
+        const caller = ALL_AFILIADOS.find(a => a.id === l.asignado_a);
+        const vencido = l.fecha_proxima_accion && l.fecha_proxima_accion.substring(0, 10) < HOY && !['CERRADO_GANADO', 'CERRADO_PERDIDO', 'PENDIENTE_VALIDACION'].includes(l.estado_actual);
+        return `<tr style="${vencido ? 'background:rgba(239,68,68,.05)' : ''};${l.estado_actual === 'PENDIENTE_VALIDACION' ? 'background:rgba(250,204,21,.05)' : ''}"
+          >
+          <td><div class="fw-600">${escapeHtml(l.nombre_negocio)}</div><div class="text-sm text-muted">${escapeHtml(l.nombre_contacto)}</div></td>
+          <td>${caller ? caller.nombre : (l.asignado_a || '–')}</td>
+          <td><span class="badge" style="font-size:10px;background:rgba(255,255,255,.07);color:var(--text-primary)">${l.estado_actual.replace(/_/g, ' ')}</span></td>
+          <td>${escapeHtml(l.nicho || '–')}</td>
+          <td>${l.presupuesto_estimado ? formatMoney(l.presupuesto_estimado) : '–'}</td>
+          <td style="font-size:12px;max-width:140px">${escapeHtml(l.proxima_accion || '–')}</td>
+          <td style="font-size:12px;${vencido ? 'color:#f87171;font-weight:700' : ''}">${l.fecha_proxima_accion ? l.fecha_proxima_accion.substring(0, 10) : '–'}</td>
+          <td>${l.estado_actual === 'PENDIENTE_VALIDACION' ? `<button class="btn btn-success btn-sm" onclick="abrirAprobarLead('${l.id}')">⚡ Validar</button>` : ''}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    // --- Callers ---
+    function renderTablaCallers() {
+      const callers = ALL_AFILIADOS.filter(a => a.rol === 'caller');
+      document.getElementById('callersCount').textContent = `${callers.length} callers registrados`;
+      const tbody = document.getElementById('tablaCallers');
+      if (callers.length === 0) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted)">Sin callers. Crea el primero.</td></tr>`; return; }
+      tbody.innerHTML = callers.map(c => {
+        const leadsAsig = ALL_LEADS.filter(l => l.asignado_a === c.id).length;
+        return `<tr>
+          <td class="fw-600">${c.nombre}</td>
+          <td>${c.email}</td>
+          <td>${c.telefono || '–'}</td>
+          <td><span class="badge badge-${c.estado}">${c.estado}</span></td>
+          <td>${leadsAsig}</td>
+          <td>${c.fecha_registro || '–'}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    // --- Crear Lead ---
+    async function crearLead() {
+      const nombre_negocio = document.getElementById('cl_negocio').value.trim();
+      const nombre_contacto = document.getElementById('cl_contacto').value.trim();
+      const telefono = document.getElementById('cl_telefono').value.trim();
+      const email = document.getElementById('cl_email').value.trim();
+      const nicho = document.getElementById('cl_nicho').value.trim();
+      const presupuesto_estimado = document.getElementById('cl_presupuesto').value;
+      const problema_detectado = document.getElementById('cl_problema').value.trim();
+      const monto_propuesto = document.getElementById('cl_monto').value;
+      const nivel_interes = document.getElementById('cl_nivel').value;
+      const asignado_a = document.getElementById('cl_caller').value;
+      const proxima_accion = document.getElementById('cl_proxima').value.trim();
+      const fecha_proxima_accion = document.getElementById('cl_fecha_proxima').value;
+
+      if (!nombre_negocio || !nombre_contacto || !telefono || !asignado_a) {
+        showModalAlert('alertCrearLead', 'error', 'Nombre del negocio, contacto, teléfono y caller son requeridos.');
+        return;
+      }
+      setLoading(true, 'Creando lead...');
+      try {
+        const res = await apiPost('crearLead', {
+          nombre_negocio, nombre_contacto, telefono, email, nicho,
+          presupuesto_estimado, problema_detectado, monto_propuesto, nivel_interes,
+          asignado_a, proxima_accion, fecha_proxima_accion, creado_por: SESSION.user_id
+        });
+        if (res.success) {
+          showToast('success', 'Lead creado', res.message);
+          closeModal('modalCrearLead');
+          await cargarTodo();
+          renderTablaLeadsAdmin();
+        } else showModalAlert('alertCrearLead', 'error', res.message || 'Error al crear lead.');
+      } catch { showModalAlert('alertCrearLead', 'error', 'Error de conexión.'); }
+      finally { setLoading(false); }
+    }
+
+    // --- Crear Caller ---
+    async function crearCaller() {
+      const nombre = document.getElementById('cc2_nombre').value.trim();
+      const email = document.getElementById('cc2_email').value.trim();
+      const password = document.getElementById('cc2_password').value;
+      const telefono = document.getElementById('cc2_telefono').value.trim();
+      const pais = document.getElementById('cc2_pais').value.trim();
+      if (!nombre || !email || !password) {
+        showModalAlert('alertCrearCaller', 'error', 'Nombre, email y contraseña son requeridos.');
+        return;
+      }
+      setLoading(true, 'Creando caller...');
+      try {
+        const res = await apiPost('crearCaller', { nombre, email, password, telefono, pais });
+        if (res.success) {
+          showToast('success', 'Caller creado', res.message);
+          closeModal('modalCrearCaller');
+          ['cc2_nombre', 'cc2_email', 'cc2_password', 'cc2_telefono', 'cc2_pais'].forEach(id => document.getElementById(id).value = '');
+          await cargarTodo();
+          renderTablaCallers();
+        } else showModalAlert('alertCrearCaller', 'error', res.message || 'Error.');
+      } catch { showModalAlert('alertCrearCaller', 'error', 'Error de conexión.'); }
+      finally { setLoading(false); }
+    }
+
+    // --- Aprobar / Rechazar Lead ---
+    function abrirAprobarLead(leadId) {
+      const lead = ALL_LEADS.find(l => l.id === leadId);
+      if (!lead) return;
+      const caller = ALL_AFILIADOS.find(a => a.id === lead.asignado_a);
+      document.getElementById('apr_lead_id').value = leadId;
+      document.getElementById('apr_monto_cierre').value = lead.monto_propuesto || '';
+      document.getElementById('apr_motivo_rechazo').value = '';
+      document.getElementById('alertAprobarLead').innerHTML = '';
+      document.getElementById('apr_lead_info').innerHTML = `
+        <div class="grid-2">
+          <div><div class="text-sm text-muted">Negocio</div><div class="fw-600">${escapeHtml(lead.nombre_negocio)}</div></div>
+          <div><div class="text-sm text-muted">Contacto</div><div class="fw-600">${escapeHtml(lead.nombre_contacto)}</div></div>
+          <div><div class="text-sm text-muted">Caller</div><div class="fw-600">${caller ? caller.nombre : lead.asignado_a}</div></div>
+          <div><div class="text-sm text-muted">Monto Propuesto</div><div class="fw-700 text-accent">${lead.monto_propuesto ? formatMoney(lead.monto_propuesto) : '–'}</div></div>
+        </div>`;
+      openModal('modalAprobarLead');
+    }
+
+    async function aprobarLead() {
+      const lead_id = document.getElementById('apr_lead_id').value;
+      const monto_cierre = document.getElementById('apr_monto_cierre').value;
+      setLoading(true, 'Aprobando lead...');
+      try {
+        const res = await apiPost('aprobarCerradoGanado', { lead_id, admin_id: SESSION.user_id, monto_cierre });
+        if (res.success) {
+          showToast('success', 'Lead aprobado', res.message);
+          closeModal('modalAprobarLead');
+          await cargarTodo();
+          renderTablaLeadsAdmin();
+        } else showModalAlert('alertAprobarLead', 'error', res.message || 'Error.');
+      } catch { showModalAlert('alertAprobarLead', 'error', 'Error de conexión.'); }
+      finally { setLoading(false); }
+    }
+
+    async function rechazarLead() {
+      const lead_id = document.getElementById('apr_lead_id').value;
+      const motivo = document.getElementById('apr_motivo_rechazo').value.trim();
+      if (!confirm('¿Rechazar este lead y devolverlo a NEGOCIACIÓN?')) return;
+      setLoading(true, 'Rechazando lead...');
+      try {
+        const res = await apiPost('rechazarCerradoGanado', { lead_id, admin_id: SESSION.user_id, motivo });
+        if (res.success) {
+          showToast('warning', 'Lead rechazado', res.message);
+          closeModal('modalAprobarLead');
+          await cargarTodo();
+          renderTablaLeadsAdmin();
+        } else showModalAlert('alertAprobarLead', 'error', res.message || 'Error.');
+      } catch { showModalAlert('alertAprobarLead', 'error', 'Error de conexión.'); }
+      finally { setLoading(false); }
     }
 
     // ============================================================

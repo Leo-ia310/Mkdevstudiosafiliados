@@ -124,7 +124,8 @@
         </div>
         <div class="form-group" style="margin-top:4px;">
           <label>Descripción del proyecto *</label>
-          <textarea id="cp_descripcion" rows="5" placeholder="Describe qué necesita el cliente, requerimientos específicos, referencias, contexto importante para el equipo..."
+          <textarea id="cp_descripcion" rows="5"
+            placeholder="Describe qué necesita el cliente, requerimientos específicos, referencias, contexto importante para el equipo..."
             style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px 14px;color:var(--text-primary);outline:none;font-size:14px;font-family:inherit;resize:vertical;line-height:1.6;box-sizing:border-box;"></textarea>
         </div>
       </div>
@@ -173,12 +174,12 @@
         <div class="nav-item" onclick="showSection('mis-clientes')" id="nav-mis-clientes">
           <i data-lucide="users" class="nav-icon"></i> Mis Clientes
         </div>
-          <div class="nav-item" onclick="showSection('mis-proyectos')" id="nav-mis-proyectos">
-            <i data-lucide="folder-kanban" class="nav-icon"></i> Mis Proyectos
-          </div>
-          <div class="nav-item" onclick="showSection('mis-comisiones')" id="nav-mis-comisiones">
-            <i data-lucide="coins" class="nav-icon"></i> Mis Comisiones
-          </div>
+        <div class="nav-item" onclick="showSection('mis-proyectos')" id="nav-mis-proyectos">
+          <i data-lucide="folder-kanban" class="nav-icon"></i> Mis Proyectos
+        </div>
+        <div class="nav-item" onclick="showSection('mis-comisiones')" id="nav-mis-comisiones">
+          <i data-lucide="coins" class="nav-icon"></i> Mis Comisiones
+        </div>
       </nav>
 
       <div class="sidebar-footer">
@@ -191,25 +192,25 @@
     <!-- MAIN CONTENT -->
     <div class="main-content">
 
-        <!-- TOPBAR -->
-        <div class="topbar">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Menú">
-              <i data-lucide="menu"></i>
-            </button>
-            <div class="topbar-title">
-              <h2 id="topbarTitle">Dashboard</h2>
-              <p id="topbarSub">Tu resumen de actividad</p>
-            </div>
-          </div>
-          <div class="topbar-actions">
-            <button class="btn btn-primary btn-sm" onclick="openModal('modalCrearCliente')">
-              <i data-lucide="user-plus" style="width:14px;height:14px;"></i> <span>Nuevo Cliente</span>
-            </button>
-            <button class="btn-icon" onclick="recargarTodo()" title="Actualizar"><i data-lucide="refresh-cw"
-                style="width:15px;height:15px;"></i></button>
+      <!-- TOPBAR -->
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Menú">
+            <i data-lucide="menu"></i>
+          </button>
+          <div class="topbar-title">
+            <h2 id="topbarTitle">Dashboard</h2>
+            <p id="topbarSub">Tu resumen de actividad</p>
           </div>
         </div>
+        <div class="topbar-actions">
+          <button class="btn btn-primary btn-sm" onclick="openModal('modalCrearCliente')">
+            <i data-lucide="user-plus" style="width:14px;height:14px;"></i> <span>Nuevo Cliente</span>
+          </button>
+          <button class="btn-icon" onclick="recargarTodo()" title="Actualizar"><i data-lucide="refresh-cw"
+              style="width:15px;height:15px;"></i></button>
+        </div>
+      </div>
 
       <!-- PAGE CONTENT -->
       <div class="page-content">
@@ -390,55 +391,55 @@
           </div>
         </div>
 
-          <!-- ======= MIS PROYECTOS ======= -->
-          <div id="section-mis-proyectos" class="section-tabs">
-            <div class="card">
-              <div class="card-header">
-                <div>
-                  <div class="card-title">Mis Proyectos</div>
-                  <div class="card-subtitle" id="misProyectosCount">Cargando...</div>
-                </div>
-                <button class="btn btn-primary btn-sm" onclick="abrirModalCrearProyecto()">
-                  <i data-lucide="plus" style="width:14px;height:14px;"></i> Proponer proyecto
-                </button>
+        <!-- ======= MIS PROYECTOS ======= -->
+        <div id="section-mis-proyectos" class="section-tabs">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Mis Proyectos</div>
+                <div class="card-subtitle" id="misProyectosCount">Cargando...</div>
               </div>
+              <button class="btn btn-primary btn-sm" onclick="abrirModalCrearProyecto()">
+                <i data-lucide="plus" style="width:14px;height:14px;"></i> Proponer proyecto
+              </button>
+            </div>
 
-              <!-- filtros -->
-              <div class="search-bar">
-                <select id="filterMisProyectosEstado" onchange="filtrarMisProyectos()"
-                  style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:9px 14px;color:var(--text-primary);outline:none;">
-                  <option value="">Todos los estados</option>
-                  <option value="pendiente">Pendiente (aprobación)</option>
-                  <option value="en_progreso">En progreso</option>
-                  <option value="completado">Completado</option>
-                  <option value="cancelado">Cancelado</option>
-                </select>
-              </div>
+            <!-- filtros -->
+            <div class="search-bar">
+              <select id="filterMisProyectosEstado" onchange="filtrarMisProyectos()"
+                style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:9px 14px;color:var(--text-primary);outline:none;">
+                <option value="">Todos los estados</option>
+                <option value="pendiente">Pendiente (aprobación)</option>
+                <option value="en_progreso">En progreso</option>
+                <option value="completado">Completado</option>
+                <option value="cancelado">Cancelado</option>
+              </select>
+            </div>
 
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Cliente</th>
-                      <th>Servicio</th>
-                      <th>Descripción</th>
-                      <th>Precio Est.</th>
-                      <th>Estado</th>
-                      <th>Entrega Est.</th>
-                      <th>Enviado</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tablaMisProyectos">
-                    <tr>
-                      <td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">Cargando...</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Servicio</th>
+                    <th>Descripción</th>
+                    <th>Precio Est.</th>
+                    <th>Estado</th>
+                    <th>Entrega Est.</th>
+                    <th>Enviado</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaMisProyectos">
+                  <tr>
+                    <td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">Cargando...</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
+        </div>
 
-          <!-- ======= MIS COMISIONES ======= -->
+        <!-- ======= MIS COMISIONES ======= -->
         <div id="section-mis-comisiones" class="section-tabs">
           <div class="card">
             <div class="card-header">
@@ -495,7 +496,7 @@
     // ============================================================
     //  CONFIG
     // ============================================================
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbztEzTUHzTRdQIVApVUxpAiBmbzcYagAjrOA95DoRcALuoWe091P8lpOtCnZZZvC3Uk_g/exec';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw-iP17hCuHwxib6VQRc-bzJRKoylO0v9rSJJ5eihYPUBC704UlAjWyaJSSNQa8p1pfiA/exec';
 
     // ============================================================
     //  SESSION
@@ -515,23 +516,23 @@
     document.getElementById('sidebarAvatar').textContent = (SESSION.user_nombre || 'A')[0].toUpperCase();
     document.getElementById('welcomeName').textContent = SESSION.user_nombre || 'Afiliado';
 
-      // ============================================================
-      //  SIDEBAR TOGGLE (mobile)
-      // ============================================================
-      function toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        sidebar.classList.toggle('open');
-        overlay.classList.toggle('open');
-      }
+    // ============================================================
+    //  SIDEBAR TOGGLE (mobile)
+    // ============================================================
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('open');
+    }
 
-      function closeSidebar() {
-        document.getElementById('sidebar').classList.remove('open');
-        document.getElementById('sidebarOverlay').classList.remove('open');
-      }
+    function closeSidebar() {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebarOverlay').classList.remove('open');
+    }
 
-      function cerrarSesion() {
-        localStorage.removeItem('mk_session');
+    function cerrarSesion() {
+      localStorage.removeItem('mk_session');
       window.location.href = 'index.html';
     }
 
@@ -608,21 +609,21 @@
       'mis-comisiones': { title: 'Mis Comisiones', sub: 'Historial de comisiones generadas' }
     };
 
-      function showSection(name) {
-        document.querySelectorAll('.section-tabs').forEach(s => s.classList.remove('active'));
-        document.getElementById(`section-${name}`).classList.add('active');
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById(`nav-${name}`).classList.add('active');
-        const meta = SECTION_META[name] || {};
-        document.getElementById('topbarTitle').textContent = meta.title || name;
-        document.getElementById('topbarSub').textContent = meta.sub || '';
-        currentSection = name;
-        closeSidebar(); // auto-close on mobile nav click
+    function showSection(name) {
+      document.querySelectorAll('.section-tabs').forEach(s => s.classList.remove('active'));
+      document.getElementById(`section-${name}`).classList.add('active');
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById(`nav-${name}`).classList.add('active');
+      const meta = SECTION_META[name] || {};
+      document.getElementById('topbarTitle').textContent = meta.title || name;
+      document.getElementById('topbarSub').textContent = meta.sub || '';
+      currentSection = name;
+      closeSidebar(); // auto-close on mobile nav click
 
-        if (name === 'mis-clientes') renderTablaMisClientes();
-        if (name === 'mis-proyectos') renderTablaMisProyectos();
-        if (name === 'mis-comisiones') renderTablaMisComisiones();
-      }
+      if (name === 'mis-clientes') renderTablaMisClientes();
+      if (name === 'mis-proyectos') renderTablaMisProyectos();
+      if (name === 'mis-comisiones') renderTablaMisComisiones();
+    }
 
     // ============================================================
     //  LOAD DATA

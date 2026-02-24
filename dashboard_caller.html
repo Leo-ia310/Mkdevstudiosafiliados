@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>MK Dev Studio – Panel Caller</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    .badge-LEAD_ASIGNADO {
+      background: rgba(100, 100, 255, .15);
+      color: #9ba4ff;
+      border: 1px solid rgba(100, 100, 255, .25)
+    }
+
+    .badge-PRIMER_CONTACTO {
+      background: rgba(59, 130, 246, .15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, .25)
+    }
+
+    .badge-NO_CONTESTO {
+      background: rgba(239, 68, 68, .15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, .25)
+    }
+
+    .badge-INTERESADO {
+      background: rgba(34, 197, 94, .15);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, .25)
+    }
+
+    .badge-NO_INTERESADO {
+      background: rgba(107, 114, 128, .15);
+      color: #9ca3af;
+      border: 1px solid rgba(107, 114, 128, .25)
+    }
+
+    .badge-REUNION_AGENDADA {
+      background: rgba(168, 85, 247, .15);
+      color: #c084fc;
+      border: 1px solid rgba(168, 85, 247, .25)
+    }
+
+    .badge-REUNION_REALIZADA {
+      background: rgba(139, 92, 246, .15);
+      color: #a78bfa;
+      border: 1px solid rgba(139, 92, 246, .25)
+    }
+
+    .badge-PROPUESTA_ENVIADA {
+      background: rgba(245, 158, 11, .15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, .25)
+    }
+
+    .badge-NEGOCIACION {
+      background: rgba(249, 115, 22, .15);
+      color: #fb923c;
+      border: 1px solid rgba(249, 115, 22, .25)
+    }
+
+    .badge-PENDIENTE_VALIDACION {
+      background: rgba(234, 179, 8, .15);
+      color: #facc15;
+      border: 1px solid rgba(234, 179, 8, .25)
+    }
+
+    .badge-CERRADO_GANADO {
+      background: rgba(34, 197, 94, .15);
+      color: #22c55e;
+      border: 1px solid rgba(34, 197, 94, .25)
+    }
+
+    .badge-CERRADO_PERDIDO {
+      background: rgba(239, 68, 68, .15);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, .25)
+    }
+
+    .vencido-row {
+      background: rgba(239, 68, 68, .06) !important
+    }
+
+    .vencido-badge {
+      display: inline-block;
+      background: rgba(239, 68, 68, .2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, .3);
+      border-radius: 4px;
+      font-size: 11px;
+      padding: 1px 7px;
+      margin-left: 6px
+    }
+
+    .nivel-star {
+      color: #facc15;
+      font-size: 13px
+    }
+
+    .kanban-board {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 12px;
+      min-height: 300px
+    }
+
+    .kanban-col {
+      min-width: 200px;
+      flex-shrink: 0;
+      background: rgba(255, 255, 255, .03);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 10px
+    }
+
+    .kanban-col-header {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      padding: 6px 0 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 8px
+    }
+
+    .kanban-card {
+      background: rgba(255, 255, 255, .04);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: background .2s
+    }
+
+    .kanban-card:hover {
+      background: rgba(255, 255, 255, .08)
+    }
+
+    .kanban-card.vencido {
+      border-left: 2px solid #ef4444
+    }
+
+    .metric-card {
+      background: rgba(255, 255, 255, .03);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 14px 18px;
+      text-align: center
+    }
+
+    .metric-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 6px
+    }
+
+    .metric-value {
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1
+    }
+
+    .metric-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Loading -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <p id="loadingMsg">Cargando...</p>
+    </div>
+  </div>
+  <!-- Toast -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ===== MODALS ===== -->
+
+  <!-- Modal: Agregar Nota -->
+  <div class="modal-backdrop" id="modalNota">
+    <div class="modal" style="max-width:520px">
+      <div class="modal-header">
+        <h3>📝 Agregar Nota</h3><button class="modal-close" onclick="closeModal('modalNota')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="alertNota"></div>
+        <input type="hidden" id="nota_lead_id" />
+        <div class="form-group">
+          <label>Nota de interacción *</label>
+          <textarea id="nota_texto" rows="4"
+            placeholder="Describe la interacción, resultado, observaciones importantes..."
+            style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px;color:var(--text-primary);font-family:inherit;font-size:14px;resize:vertical;outline:none;box-sizing:border-box"></textarea>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Próxima acción</label>
+            <input type="text" id="nota_proxima" placeholder="ej. Llamar de nuevo" />
+          </div>
+          <div class="form-group">
+            <label>Fecha próxima acción</label>
+            <input type="date" id="nota_fecha" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalNota')">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarNota()">Guardar nota</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Cambiar Estado -->
+  <div class="modal-backdrop" id="modalEstado">
+    <div class="modal" style="max-width:540px">
+      <div class="modal-header">
+        <h3>🔄 Cambiar Estado</h3><button class="modal-close" onclick="closeModal('modalEstado')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="alertEstado"></div>
+        <input type="hidden" id="estado_lead_id" />
+        <div class="form-group">
+          <label>Nuevo estado *</label>
+          <select id="estado_nuevo" onchange="onEstadoChange()">
+            <option value="LEAD_ASIGNADO">Lead Asignado</option>
+            <option value="PRIMER_CONTACTO">Primer Contacto</option>
+            <option value="NO_CONTESTO">No Contestó</option>
+            <option value="INTERESADO">Interesado</option>
+            <option value="NO_INTERESADO">No Interesado</option>
+            <option value="REUNION_AGENDADA">Reunión Agendada</option>
+            <option value="REUNION_REALIZADA">Reunión Realizada</option>
+            <option value="PROPUESTA_ENVIADA">Propuesta Enviada</option>
+            <option value="NEGOCIACION">En Negociación</option>
+            <option value="CERRADO_GANADO">Cerrado Ganado ⚡</option>
+            <option value="CERRADO_PERDIDO">Cerrado Perdido</option>
+          </select>
+        </div>
+        <div id="campo_reunion" style="display:none" class="form-group">
+          <label>📅 Fecha y hora de reunión * (obligatorio)</label>
+          <input type="datetime-local" id="estado_fecha_reunion" />
+        </div>
+        <div id="campo_nota_estado" class="form-group">
+          <label>Nota <span id="nota_requerida_label" style="color:var(--danger)"></span></label>
+          <textarea id="estado_nota" rows="3" placeholder="Describe el resultado de la interacción..."
+            style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;color:var(--text-primary);font-family:inherit;font-size:14px;resize:vertical;outline:none;box-sizing:border-box"></textarea>
+        </div>
+        <div id="campo_resumen" style="display:none" class="form-group">
+          <label>Resumen de propuesta * (obligatorio)</label>
+          <textarea id="estado_resumen" rows="3" placeholder="Resume los servicios, precio y condiciones propuestas..."
+            style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;color:var(--text-primary);font-family:inherit;font-size:14px;resize:vertical;outline:none;box-sizing:border-box"></textarea>
+        </div>
+        <div id="alerta_cerrado_ganado" style="display:none" class="alert alert-warning mt-8" style="font-size:12px">
+          ⚡ Al marcar como <b>Cerrado Ganado</b>, el lead quedará en <b>PENDIENTE_VALIDACION</b> hasta que el Admin lo
+          apruebe.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalEstado')">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarCambioEstado()">Confirmar cambio</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Agendar Reunión -->
+  <div class="modal-backdrop" id="modalReunion">
+    <div class="modal" style="max-width:500px">
+      <div class="modal-header">
+        <h3>📅 Agendar Reunión</h3><button class="modal-close" onclick="closeModal('modalReunion')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="alertReunion"></div>
+        <input type="hidden" id="reunion_lead_id" />
+        <div class="form-group">
+          <label>Fecha y hora de reunión * (obligatorio)</label>
+          <input type="datetime-local" id="reunion_datetime" />
+        </div>
+        <div class="form-group">
+          <label>Notas de la reunión</label>
+          <textarea id="reunion_nota" rows="3" placeholder="Plataforma, enlace, temas a tratar..."
+            style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px;color:var(--text-primary);font-family:inherit;font-size:14px;resize:vertical;outline:none;box-sizing:border-box"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalReunion')">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarReunion()">Agendar reunión</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Ver Lead -->
+  <div class="modal-backdrop" id="modalVerLead">
+    <div class="modal" style="max-width:680px">
+      <div class="modal-header">
+        <h3>Lead – Detalle</h3><button class="modal-close" onclick="closeModal('modalVerLead')">✕</button>
+      </div>
+      <div class="modal-body" id="modalVerLeadBody"></div>
+      <div class="modal-footer" id="modalVerLeadFooter"></div>
+    </div>
+  </div>
+
+  <!-- APP LAYOUT -->
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="logo-mark"><img class="logo" src="logo.jpg" alt="Logo"></div>
+          <div>
+            <div class="logo-text">MK Dev Studio</div>
+            <div class="logo-sub">Panel Caller</div>
+          </div>
+        </div>
+      </div>
+      <div class="sidebar-user">
+        <div class="avatar" id="sidebarAvatar">C</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebarNombre">Caller</div>
+          <span class="user-role"
+            style="background:rgba(168,85,247,.2);color:#c084fc;border:1px solid rgba(168,85,247,.3);border-radius:20px;font-size:10px;padding:2px 10px;font-weight:700">CALLER</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Mi Panel</div>
+        <div class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard">
+          <i data-lucide="layout-dashboard" class="nav-icon"></i> Dashboard
+        </div>
+        <div class="nav-item" onclick="showSection('mis-leads')" id="nav-mis-leads">
+          <i data-lucide="phone-call" class="nav-icon"></i> Mis Leads
+          <span id="badge_vencidos"
+            style="display:none;margin-left:auto;background:#ef4444;color:#fff;border-radius:10px;font-size:10px;padding:1px 6px;font-weight:700"></span>
+        </div>
+        <div class="nav-item" onclick="showSection('kanban')" id="nav-kanban">
+          <i data-lucide="kanban" class="nav-icon"></i> Kanban
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn btn-secondary btn-block btn-sm" onclick="cerrarSesion()">
+          <i data-lucide="log-out" style="width:14px;height:14px"></i> Cerrar sesión
+        </button>
+      </div>
+    </aside>
+
+    <div class="main-content">
+      <div class="topbar">
+        <div class="topbar-title">
+          <h2 id="topbarTitle">Dashboard</h2>
+          <p id="topbarSub">Tu resumen personal de actividad</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn-icon" onclick="recargarTodo()" title="Actualizar"><i data-lucide="refresh-cw"
+              style="width:15px;height:15px"></i></button>
+        </div>
+      </div>
+
+      <div class="page-content">
+
+        <!-- ======= DASHBOARD ======= -->
+        <div id="section-dashboard" class="section-tabs active">
+
+          <!-- Bienvenida -->
+          <div class="card mb-24"
+            style="background:linear-gradient(135deg,rgba(168,85,247,.12),rgba(139,92,246,.06));border-color:var(--border)">
+            <div class="flex justify-between items-center">
+              <div>
+                <h3 style="font-size:20px;font-weight:800;margin-bottom:4px">¡Hola, <span
+                    id="welcomeName">Caller</span>!</h3>
+                <p class="text-muted">Tu módulo de gestión de leads y seguimiento.</p>
+              </div>
+              <div style="opacity:.3"><i data-lucide="phone-call" style="width:52px;height:52px"></i></div>
+            </div>
+          </div>
+
+          <!-- Alerta de leads vencidos -->
+          <div id="alertaVencidos" style="display:none" class="alert alert-error mb-16">
+            🔴 <strong>Tienes leads con seguimiento vencido.</strong> Revisa tu lista de leads urgentemente.
+            <button class="btn btn-secondary btn-sm" style="margin-left:12px" onclick="showSection('mis-leads')">Ver
+              leads →</button>
+          </div>
+
+          <!-- Métricas personales -->
+          <div class="metrics-grid" id="metricsGrid">
+            <div class="metric-card">
+              <div class="metric-label">Leads Asignados</div>
+              <div class="metric-value" id="m_asignados">–</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Pendientes Hoy</div>
+              <div class="metric-value" id="m_pendientes" style="color:#f87171">–</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Llamadas</div>
+              <div class="metric-value" id="m_llamadas">–</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Reuniones Agendadas</div>
+              <div class="metric-value" id="m_r_agendadas">–</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Reuniones Realizadas</div>
+              <div class="metric-value" id="m_r_realizadas">–</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Ventas (mes)</div>
+              <div class="metric-value" id="m_ventas_mes">–</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Tasa Contacto</div>
+              <div class="metric-value" id="m_tasa_contacto">–</div>
+              <div class="metric-sub">% leads contactados</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Tasa Cierre</div>
+              <div class="metric-value" id="m_tasa_cierre">–</div>
+              <div class="metric-sub">% leads cerrados</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Comisión Estimada</div>
+              <div class="metric-value text-accent" id="m_comision">–</div>
+            </div>
+          </div>
+
+          <!-- Leads urgentes -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title"><i data-lucide="alert-triangle"
+                    style="width:15px;height:15px;display:inline;vertical-align:middle;margin-right:6px;color:#f87171"></i>Leads
+                  que requieren acción hoy</div>
+                <div class="card-subtitle">Seguimientos vencidos o con fecha de hoy</div>
+              </div>
+            </div>
+            <div id="leadsUrgentesContainer">
+              <div class="empty-state" style="padding:30px 0">
+                <div class="empty-icon">📋</div>
+                <p>Cargando...</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ======= MIS LEADS ======= -->
+        <div id="section-mis-leads" class="section-tabs">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Mis Leads</div>
+                <div class="card-subtitle" id="leadsCount">Cargando...</div>
+              </div>
+            </div>
+            <div class="search-bar">
+              <div class="search-input-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchLeads" placeholder="Buscar por nombre, negocio, teléfono..."
+                  oninput="filtrarLeads()" />
+              </div>
+              <select id="filterEstadoLead" onchange="filtrarLeads()"
+                style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:9px 14px;color:var(--text-primary);outline:none">
+                <option value="">Todos los estados</option>
+                <option value="LEAD_ASIGNADO">Lead Asignado</option>
+                <option value="PRIMER_CONTACTO">Primer Contacto</option>
+                <option value="NO_CONTESTO">No Contestó</option>
+                <option value="INTERESADO">Interesado</option>
+                <option value="NO_INTERESADO">No Interesado</option>
+                <option value="REUNION_AGENDADA">Reunión Agendada</option>
+                <option value="REUNION_REALIZADA">Reunión Realizada</option>
+                <option value="PROPUESTA_ENVIADA">Propuesta Enviada</option>
+                <option value="NEGOCIACION">Negociación</option>
+                <option value="PENDIENTE_VALIDACION">Pendiente Validación</option>
+                <option value="CERRADO_GANADO">Cerrado Ganado</option>
+                <option value="CERRADO_PERDIDO">Cerrado Perdido</option>
+              </select>
+              <select id="filterVencidos" onchange="filtrarLeads()"
+                style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:9px 14px;color:var(--text-primary);outline:none">
+                <option value="">Todos</option>
+                <option value="vencidos">Solo vencidos 🔴</option>
+                <option value="hoy">Seguimiento hoy</option>
+              </select>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Negocio / Contacto</th>
+                    <th>Teléfono</th>
+                    <th>Nicho</th>
+                    <th>Estado</th>
+                    <th>Nivel Interés</th>
+                    <th>Próxima Acción</th>
+                    <th>Fecha Siguiente</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaLeads">
+                  <tr>
+                    <td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)">Cargando...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ======= KANBAN ======= -->
+        <div id="section-kanban" class="section-tabs">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Vista Kanban</div>
+                <div class="card-subtitle">Mis leads por estado de pipeline</div>
+              </div>
+            </div>
+            <div class="kanban-board" id="kanbanBoard">
+              <div class="empty-state" style="padding:40px;width:100%">
+                <p>Cargando...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /page-content -->
+    </div><!-- /main-content -->
+  </div><!-- /app-layout -->
+
+  <script>
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw-iP17hCuHwxib6VQRc-bzJRKoylO0v9rSJJ5eihYPUBC704UlAjWyaJSSNQa8p1pfiA/exec';
+
+    // ── Session ──────────────────────────────────────────────────
+    const SESSION = (function () { try { return JSON.parse(localStorage.getItem('mk_session')) } catch { return null } })();
+    if (!SESSION || SESSION.user_rol !== 'caller') { window.location.href = 'index.html'; }
+    const CALLER_ID = SESSION.user_id;
+
+    document.getElementById('sidebarNombre').textContent = SESSION.user_nombre || 'Caller';
+    document.getElementById('sidebarAvatar').textContent = (SESSION.user_nombre || 'C')[0].toUpperCase();
+    document.getElementById('welcomeName').textContent = SESSION.user_nombre || 'Caller';
+
+    function cerrarSesion() {
+      // Bloquear si hay leads vencidos
+      const vencidos = MIS_LEADS.filter(l => esVencido(l) && !['CERRADO_GANADO', 'CERRADO_PERDIDO', 'PENDIENTE_VALIDACION'].includes(l.estado_actual));
+      if (vencidos.length > 0) {
+        if (!confirm('⚠️ Tienes ' + vencidos.length + ' lead(s) con seguimiento vencido.\n¿Seguro que deseas cerrar sesión sin atenderlos?')) return;
+      }
+      localStorage.removeItem('mk_session');
+      window.location.href = 'index.html';
+    }
+
+    // ── State ────────────────────────────────────────────────────
+    let MIS_LEADS = [];
+    let currentSection = 'dashboard';
+
+    // ── Utils ────────────────────────────────────────────────────
+    const HOY = new Date().toISOString().split('T')[0];
+
+    function esVencido(lead) {
+      if (!lead.fecha_proxima_accion) return false;
+      return lead.fecha_proxima_accion.substring(0, 10) < HOY;
+    }
+    function esHoy(lead) {
+      if (!lead.fecha_proxima_accion) return false;
+      return lead.fecha_proxima_accion.substring(0, 10) === HOY;
+    }
+    function formatMoney(v) { const n = parseFloat(v) || 0; return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+    function formatDate(s) { if (!s || s === '–') return '–'; try { return new Date(s).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }) } catch { return s } }
+    function escHtml(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#39;') }
+    function estrellas(n) { const num = parseInt(n) || 1; return '★'.repeat(Math.min(num, 5)) + '☆'.repeat(Math.max(0, 5 - num)) }
+
+    function showToast(type, title, msg, d = 4000) {
+      const c = document.getElementById('toastContainer'), icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+      const t = document.createElement('div'); t.className = `toast toast-${type}`;
+      t.innerHTML = `<span class="toast-icon">${icons[type] || 'ℹ️'}</span><div class="toast-body"><div class="toast-title">${title}</div>${msg ? `<div class="toast-msg">${msg}</div>` : ''}</div><span class="toast-close" onclick="removeToast(this.parentElement)">✕</span>`;
+      c.appendChild(t); if (d > 0) setTimeout(() => removeToast(t), d);
+    }
+    function removeToast(el) { if (!el || !el.parentElement) return; el.classList.add('removing'); setTimeout(() => el.remove(), 300) }
+    function setLoading(show, msg = 'Cargando...') { document.getElementById('loadingMsg').textContent = msg; document.getElementById('loadingOverlay').classList.toggle('show', show) }
+    function showModalAlert(id, type, msg) { document.getElementById(id).innerHTML = `<div class="alert alert-${type}">${msg}</div>` }
+
+    // ── API ──────────────────────────────────────────────────────
+    async function apiGet(params) { const r = await fetch(`${APPS_SCRIPT_URL}?${new URLSearchParams(params)}`); return r.json() }
+    async function apiPost(action, body) { const r = await fetch(APPS_SCRIPT_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ action, ...body }) }); return r.json() }
+
+    // ── Navigation ───────────────────────────────────────────────
+    const SECTION_META = {
+      dashboard: { title: 'Dashboard', sub: 'Tu resumen personal de actividad' },
+      'mis-leads': { title: 'Mis Leads', sub: 'Lista de leads asignados a ti' },
+      kanban: { title: 'Vista Kanban', sub: 'Leads por estado de pipeline' }
+    };
+    function showSection(name) {
+      document.querySelectorAll('.section-tabs').forEach(s => s.classList.remove('active'));
+      document.getElementById(`section-${name}`).classList.add('active');
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById(`nav-${name}`).classList.add('active');
+      const m = SECTION_META[name] || {};
+      document.getElementById('topbarTitle').textContent = m.title || name;
+      document.getElementById('topbarSub').textContent = m.sub || '';
+      currentSection = name;
+      if (name === 'mis-leads') renderTablaLeads();
+      if (name === 'kanban') renderKanban();
+    }
+
+    // ── Load Data ────────────────────────────────────────────────
+    async function cargarTodo() {
+      setLoading(true, 'Cargando tus leads...');
+      try {
+        const [resLeads, resMet] = await Promise.all([
+          apiGet({ action: 'getLeads', caller_id: CALLER_ID }),
+          apiGet({ action: 'getMetricasCaller', caller_id: CALLER_ID })
+        ]);
+        MIS_LEADS = resLeads.data || [];
+        renderDashboard(resMet.data || {});
+        actualizarBadgeVencidos();
+      } catch (err) {
+        showToast('error', 'Error de conexión', 'No se pudo cargar los datos.');
+      } finally { setLoading(false) }
+    }
+    function recargarTodo() { cargarTodo() }
+
+    // ── Dashboard ────────────────────────────────────────────────
+    function renderDashboard(m) {
+      document.getElementById('m_asignados').textContent = m.asignados ?? '–';
+      document.getElementById('m_pendientes').textContent = m.pendientesHoy ?? '–';
+      document.getElementById('m_llamadas').textContent = m.llamadas_realizadas ?? '–';
+      document.getElementById('m_r_agendadas').textContent = m.reuniones_agendadas ?? '–';
+      document.getElementById('m_r_realizadas').textContent = m.reuniones_realizadas ?? '–';
+      document.getElementById('m_ventas_mes').textContent = m.ventas_mes ?? '–';
+      document.getElementById('m_tasa_contacto').textContent = (m.tasa_contacto !== undefined ? m.tasa_contacto + '%' : '–');
+      document.getElementById('m_tasa_cierre').textContent = (m.tasa_cierre !== undefined ? m.tasa_cierre + '%' : '–');
+      document.getElementById('m_comision').textContent = m.comision_estimada !== undefined ? formatMoney(m.comision_estimada) : '–';
+      renderLeadsUrgentes();
+      const venc = MIS_LEADS.filter(l => esVencido(l) && !['CERRADO_GANADO', 'CERRADO_PERDIDO', 'PENDIENTE_VALIDACION'].includes(l.estado_actual)).length;
+      document.getElementById('alertaVencidos').style.display = venc > 0 ? 'flex' : 'none';
+    }
+
+    function renderLeadsUrgentes() {
+      const cont = document.getElementById('leadsUrgentesContainer');
+      const urgentes = MIS_LEADS.filter(l => (esVencido(l) || esHoy(l)) && !['CERRADO_GANADO', 'CERRADO_PERDIDO', 'PENDIENTE_VALIDACION'].includes(l.estado_actual)).slice(0, 8);
+      if (urgentes.length === 0) { cont.innerHTML = '<div class="empty-state" style="padding:20px 0"><div class="empty-icon">✅</div><p>Sin seguimientos pendientes hoy</p></div>'; return }
+      cont.innerHTML = `<div class="table-wrapper"><table><thead><tr><th>Negocio</th><th>Estado</th><th>Próxima Acción</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody>${urgentes.map(l => `<tr class="${esVencido(l) ? 'vencido-row' : ''}">
+      <td class="fw-600">${escHtml(l.nombre_negocio)}${esVencido(l) ? '<span class="vencido-badge">VENCIDO</span>' : ''}<br><span class="text-sm text-muted">${escHtml(l.nombre_contacto)}</span></td>
+      <td><span class="badge badge-${l.estado_actual}">${l.estado_actual.replace(/_/g, ' ')}</span></td>
+      <td style="font-size:12px">${escHtml(l.proxima_accion || '–')}</td>
+      <td style="font-size:12px;${esVencido(l) ? 'color:#f87171;font-weight:700' : ''}">${formatDate(l.fecha_proxima_accion)}</td>
+      <td><div style="display:flex;gap:6px">
+        <button class="btn btn-secondary btn-sm" onclick="abrirNota('${l.id}')">📝 Nota</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirEstado('${l.id}','${l.estado_actual}')">🔄 Estado</button>
+      </div></td>
+    </tr>`).join('')
+        }</tbody></table></div>`;
+    }
+
+    function actualizarBadgeVencidos() {
+      const n = MIS_LEADS.filter(l => esVencido(l) && !['CERRADO_GANADO', 'CERRADO_PERDIDO', 'PENDIENTE_VALIDACION'].includes(l.estado_actual)).length;
+      const b = document.getElementById('badge_vencidos');
+      b.style.display = n > 0 ? 'inline' : 'none';
+      b.textContent = n;
+    }
+
+    // ── Tabla Leads ──────────────────────────────────────────────
+    function renderTablaLeads() {
+      document.getElementById('leadsCount').textContent = `${MIS_LEADS.length} leads asignados`;
+      filtrarLeads();
+    }
+    function filtrarLeads() {
+      const q = (document.getElementById('searchLeads').value || '').toLowerCase();
+      const est = document.getElementById('filterEstadoLead').value;
+      const venc = document.getElementById('filterVencidos').value;
+      let data = MIS_LEADS.filter(l => {
+        const ms = !q || [l.nombre_negocio, l.nombre_contacto, l.telefono, l.nicho].some(f => (f || '').toLowerCase().includes(q));
+        const me = !est || l.estado_actual === est;
+        const mv = !venc || (venc === 'vencidos' && esVencido(l)) || (venc === 'hoy' && esHoy(l));
+        return ms && me && mv;
+      });
+      const tbody = document.getElementById('tablaLeads');
+      if (data.length === 0) { tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state" style="padding:30px 0"><div class="empty-icon">📋</div><p>No se encontraron leads</p></div></td></tr>`; return }
+      tbody.innerHTML = data.map(l => {
+        const vencido = esVencido(l) && !['CERRADO_GANADO', 'CERRADO_PERDIDO', 'PENDIENTE_VALIDACION'].includes(l.estado_actual);
+        const cerrado = ['CERRADO_GANADO', 'CERRADO_PERDIDO', 'PENDIENTE_VALIDACION'].includes(l.estado_actual);
+        return `<tr class="${vencido ? 'vencido-row' : ''}">
+      <td><div class="fw-600">${escHtml(l.nombre_negocio)}${vencido ? '<span class="vencido-badge">VENCIDO</span>' : ''}</div><div class="text-sm text-muted">${escHtml(l.nombre_contacto)}</div></td>
+      <td>${escHtml(l.telefono || '–')}</td>
+      <td><span class="text-sm">${escHtml(l.nicho || '–')}</span></td>
+      <td><span class="badge badge-${l.estado_actual}" style="font-size:10px">${l.estado_actual.replace(/_/g, ' ')}</span></td>
+      <td><span class="nivel-star">${estrellas(l.nivel_interes)}</span></td>
+      <td style="max-width:160px;font-size:12px">${escHtml(l.proxima_accion || '–')}</td>
+      <td style="font-size:12px;${vencido ? 'color:#f87171;font-weight:700' : ''}">${formatDate(l.fecha_proxima_accion)}</td>
+      <td><div style="display:flex;gap:5px;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" onclick="verLead('${l.id}')">👁</button>
+        ${!cerrado ? `<button class="btn btn-secondary btn-sm" onclick="abrirNota('${l.id}')">📝</button>` : ''}
+        ${!cerrado ? `<button class="btn btn-primary btn-sm" onclick="abrirEstado('${l.id}','${l.estado_actual}')">🔄</button>` : ''}
+        ${!cerrado ? `<button class="btn btn-success btn-sm" onclick="marcarLlamada('${l.id}')" title="Marcar llamada realizada">📞</button>` : ''}
+        ${!cerrado && l.estado_actual !== 'REUNION_AGENDADA' ? `<button class="btn btn-secondary btn-sm" onclick="abrirReunion('${l.id}')" title="Agendar reunión">📅</button>` : ''}
+      </div></td>
+    </tr>`;
+      }).join('');
+    }
+
+    // ── Kanban ───────────────────────────────────────────────────
+    const KANBAN_STAGES = [
+      { key: 'LEAD_ASIGNADO', label: 'Lead Asignado', color: '#9ba4ff' },
+      { key: 'PRIMER_CONTACTO', label: 'Primer Contacto', color: '#60a5fa' },
+      { key: 'NO_CONTESTO', label: 'No Contestó', color: '#f87171' },
+      { key: 'INTERESADO', label: 'Interesado', color: '#4ade80' },
+      { key: 'NO_INTERESADO', label: 'No Interesado', color: '#9ca3af' },
+      { key: 'REUNION_AGENDADA', label: 'Reunión Agendada', color: '#c084fc' },
+      { key: 'REUNION_REALIZADA', label: 'Reunión Realizada', color: '#a78bfa' },
+      { key: 'PROPUESTA_ENVIADA', label: 'Propuesta Enviada', color: '#fbbf24' },
+      { key: 'NEGOCIACION', label: 'Negociación', color: '#fb923c' },
+      { key: 'PENDIENTE_VALIDACION', label: 'Pendiente Validación', color: '#facc15' },
+      { key: 'CERRADO_GANADO', label: 'Cerrado ✅', color: '#22c55e' },
+      { key: 'CERRADO_PERDIDO', label: 'Cerrado Perdido', color: '#ef4444' },
+    ];
+    function renderKanban() {
+      const board = document.getElementById('kanbanBoard');
+      board.innerHTML = KANBAN_STAGES.map(st => {
+        const leads = MIS_LEADS.filter(l => l.estado_actual === st.key);
+        return `<div class="kanban-col">
+      <div class="kanban-col-header" style="color:${st.color}">${st.label} <span style="opacity:.6;font-weight:400">(${leads.length})</span></div>
+      ${leads.length === 0 ? `<div style="font-size:11px;color:var(--text-muted);text-align:center;padding:10px">Sin leads</div>` :
+            leads.map(l => `<div class="kanban-card ${esVencido(l) && !['CERRADO_GANADO', 'CERRADO_PERDIDO', 'PENDIENTE_VALIDACION'].includes(l.estado_actual) ? 'vencido' : ''}" onclick="verLead('${l.id}')">
+          <div class="fw-600" style="font-size:12px">${escHtml(l.nombre_negocio)}</div>
+          <div class="text-sm text-muted">${escHtml(l.nombre_contacto)}</div>
+          ${esVencido(l) ? `<span class="vencido-badge" style="margin-left:0;margin-top:4px">VENCIDO</span>` : ''}
+        </div>`).join('')}
+    </div>`;
+      }).join('');
+    }
+
+    // ── Ver Lead ─────────────────────────────────────────────────
+    async function verLead(id) {
+      const l = MIS_LEADS.find(x => x.id === id); if (!l) return;
+      const cerrado = ['CERRADO_GANADO', 'CERRADO_PERDIDO', 'PENDIENTE_VALIDACION'].includes(l.estado_actual);
+      setLoading(true, 'Cargando historial...');
+      let hist = [];
+      try { const r = await apiGet({ action: 'getLeadHistorial', lead_id: id }); hist = r.data || [] } catch { } finally { setLoading(false) }
+
+      document.getElementById('modalVerLeadBody').innerHTML = `
+    <div class="grid-2 mb-16">
+      <div><div class="text-sm text-muted">Negocio</div><div class="fw-600 mt-4">${escHtml(l.nombre_negocio)}</div></div>
+      <div><div class="text-sm text-muted">Contacto</div><div class="fw-600 mt-4">${escHtml(l.nombre_contacto)}</div></div>
+      <div><div class="text-sm text-muted">Teléfono</div><div class="fw-600 mt-4">${escHtml(l.telefono)}</div></div>
+      <div><div class="text-sm text-muted">Email</div><div class="fw-600 mt-4">${escHtml(l.email || '–')}</div></div>
+      <div><div class="text-sm text-muted">Nicho</div><div class="fw-600 mt-4">${escHtml(l.nicho || '–')}</div></div>
+      <div><div class="text-sm text-muted">Nivel Interés</div><div class="fw-600 mt-4 nivel-star">${estrellas(l.nivel_interes)}</div></div>
+      <div><div class="text-sm text-muted">Presupuesto est.</div><div class="fw-600 mt-4">${l.presupuesto_estimado ? formatMoney(l.presupuesto_estimado) : '–'}</div></div>
+      <div><div class="text-sm text-muted">Monto propuesto</div><div class="fw-600 mt-4">${l.monto_propuesto ? formatMoney(l.monto_propuesto) : '–'}</div></div>
+      <div style="grid-column:1/-1"><div class="text-sm text-muted">Estado actual</div><div class="mt-4"><span class="badge badge-${l.estado_actual}">${l.estado_actual.replace(/_/g, ' ')}</span></div></div>
+      <div style="grid-column:1/-1"><div class="text-sm text-muted">Problema detectado</div><div class="fw-600 mt-4">${escHtml(l.problema_detectado || '–')}</div></div>
+      <div><div class="text-sm text-muted">Próxima acción</div><div class="fw-600 mt-4">${escHtml(l.proxima_accion || '–')}</div></div>
+      <div><div class="text-sm text-muted">Fecha próxima</div><div class="fw-600 mt-4 ${esVencido(l) ? 'text-danger' : ''}">${formatDate(l.fecha_proxima_accion)}</div></div>
+      ${l.fecha_reunion ? `<div style="grid-column:1/-1"><div class="text-sm text-muted">Reunión agendada</div><div class="fw-600 mt-4">${l.fecha_reunion}</div></div>` : ''}
+    </div>
+    ${hist.length > 0 ? `<div class="card-title mb-8" style="font-size:13px">📋 Historial</div>
+    <div class="table-wrapper"><table><thead><tr><th>Estado anterior</th><th>Estado nuevo</th><th>Nota</th><th>Fecha</th></tr></thead><tbody>
+    ${[...hist].reverse().map(h => `<tr>
+      <td><span class="badge badge-${h.estado_anterior || 'LEAD_ASIGNADO'}" style="font-size:10px">${(h.estado_anterior || '–').replace(/_/g, ' ')}</span></td>
+      <td><span class="badge badge-${h.estado_nuevo}" style="font-size:10px">${h.estado_nuevo.replace(/_/g, ' ')}</span></td>
+      <td style="font-size:12px;max-width:250px">${escHtml(h.nota || '–')}</td>
+      <td style="font-size:12px">${formatDate(h.fecha_cambio)}</td>
+    </tr>`).join('')}
+    </tbody></table></div>`: '<p class="text-muted text-sm">Sin historial aún.</p>'}
+  `;
+      document.getElementById('modalVerLeadFooter').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal('modalVerLead')">Cerrar</button>
+    ${!cerrado ? `<button class="btn btn-secondary" onclick="closeModal('modalVerLead');abrirNota('${l.id}')">📝 Nota</button>` : ''}
+    ${!cerrado ? `<button class="btn btn-primary" onclick="closeModal('modalVerLead');abrirEstado('${l.id}','${l.estado_actual}')">🔄 Estado</button>` : ''}
+    ${!cerrado ? `<button class="btn btn-success" onclick="closeModal('modalVerLead');marcarLlamada('${l.id}')">📞 Llamada</button>` : ''}
+  `;
+      openModal('modalVerLead');
+    }
+
+    // ── Nota ─────────────────────────────────────────────────────
+    function abrirNota(leadId) {
+      document.getElementById('nota_lead_id').value = leadId;
+      document.getElementById('nota_texto').value = '';
+      document.getElementById('nota_proxima').value = '';
+      document.getElementById('nota_fecha').value = '';
+      document.getElementById('alertNota').innerHTML = '';
+      openModal('modalNota');
+    }
+    async function guardarNota() {
+      const lead_id = document.getElementById('nota_lead_id').value;
+      const nota = document.getElementById('nota_texto').value.trim();
+      const proxima_accion = document.getElementById('nota_proxima').value.trim();
+      const fecha_proxima_accion = document.getElementById('nota_fecha').value;
+      if (!nota || nota.length < 5) { showModalAlert('alertNota', 'error', 'La nota debe tener al menos 5 caracteres.'); return }
+      setLoading(true, 'Guardando nota...');
+      try {
+        const r = await apiPost('agregarNota', { lead_id, caller_id: CALLER_ID, nota, proxima_accion, fecha_proxima_accion });
+        if (r.success) { showToast('success', 'Nota guardada', r.message); closeModal('modalNota'); await cargarTodo(); if (currentSection === 'mis-leads') renderTablaLeads() }
+        else showModalAlert('alertNota', 'error', r.message || 'Error al guardar nota.');
+      } catch { showModalAlert('alertNota', 'error', 'Error de conexión.') }
+      finally { setLoading(false) }
+    }
+
+    // ── Cambiar Estado ───────────────────────────────────────────
+    function abrirEstado(leadId, estadoActual) {
+      document.getElementById('estado_lead_id').value = leadId;
+      document.getElementById('estado_nuevo').value = estadoActual;
+      document.getElementById('estado_nota').value = '';
+      document.getElementById('estado_resumen').value = '';
+      document.getElementById('estado_fecha_reunion').value = '';
+      document.getElementById('alertEstado').innerHTML = '';
+      onEstadoChange();
+      openModal('modalEstado');
+    }
+    function onEstadoChange() {
+      const est = document.getElementById('estado_nuevo').value;
+      document.getElementById('campo_reunion').style.display = est === 'REUNION_AGENDADA' ? 'block' : 'none';
+      document.getElementById('campo_resumen').style.display = est === 'PROPUESTA_ENVIADA' ? 'block' : 'none';
+      document.getElementById('alerta_cerrado_ganado').style.display = est === 'CERRADO_GANADO' ? 'block' : 'none';
+      const req = ['INTERESADO', 'CERRADO_PERDIDO'].includes(est);
+      document.getElementById('nota_requerida_label').textContent = req ? ' * (obligatorio)' : '';
+    }
+    async function confirmarCambioEstado() {
+      const lead_id = document.getElementById('estado_lead_id').value;
+      const nuevo_estado = document.getElementById('estado_nuevo').value;
+      const nota = document.getElementById('estado_nota').value.trim();
+      const resumen = document.getElementById('estado_resumen').value.trim();
+      const fecha_reunion = document.getElementById('estado_fecha_reunion').value;
+
+      if (nuevo_estado === 'REUNION_AGENDADA' && !fecha_reunion) { showModalAlert('alertEstado', 'error', 'La fecha y hora de reunión es obligatoria.'); return }
+      if (nuevo_estado === 'INTERESADO' && nota.length < 10) { showModalAlert('alertEstado', 'error', 'Agrega una nota descriptiva (mín. 10 caracteres) para marcar como INTERESADO.'); return }
+      if (nuevo_estado === 'PROPUESTA_ENVIADA' && resumen.length < 10) { showModalAlert('alertEstado', 'error', 'El resumen de propuesta es obligatorio (mín. 10 caracteres).'); return }
+
+      setLoading(true, 'Actualizando estado...');
+      try {
+        const r = await apiPost('cambiarEstadoLead', { lead_id, caller_id: CALLER_ID, nuevo_estado, nota, resumen, fecha_reunion });
+        if (r.success) { showToast('success', 'Estado actualizado', r.message); closeModal('modalEstado'); await cargarTodo(); if (currentSection === 'mis-leads') renderTablaLeads(); if (currentSection === 'kanban') renderKanban() }
+        else showModalAlert('alertEstado', 'error', r.message || 'Error al cambiar estado.');
+      } catch { showModalAlert('alertEstado', 'error', 'Error de conexión.') }
+      finally { setLoading(false) }
+    }
+
+    // ── Marcar Llamada ───────────────────────────────────────────
+    async function marcarLlamada(leadId) {
+      setLoading(true, 'Registrando llamada...');
+      try {
+        const r = await apiPost('marcarLlamada', { lead_id: leadId, caller_id: CALLER_ID, nota: 'Llamada realizada.' });
+        if (r.success) { showToast('success', 'Llamada registrada', 'La llamada fue marcada en el historial.'); await cargarTodo(); if (currentSection === 'mis-leads') renderTablaLeads() }
+        else showToast('error', 'Error', r.message);
+      } catch { showToast('error', 'Error de conexión', '') }
+      finally { setLoading(false) }
+    }
+
+    // ── Agendar Reunión ──────────────────────────────────────────
+    function abrirReunion(leadId) {
+      document.getElementById('reunion_lead_id').value = leadId;
+      document.getElementById('reunion_datetime').value = '';
+      document.getElementById('reunion_nota').value = '';
+      document.getElementById('alertReunion').innerHTML = '';
+      openModal('modalReunion');
+    }
+    async function confirmarReunion() {
+      const lead_id = document.getElementById('reunion_lead_id').value;
+      const fecha_reunion = document.getElementById('reunion_datetime').value;
+      const nota = document.getElementById('reunion_nota').value.trim();
+      if (!fecha_reunion) { showModalAlert('alertReunion', 'error', 'La fecha y hora de reunión es obligatoria.'); return }
+      setLoading(true, 'Agendando reunión...');
+      try {
+        const r = await apiPost('agendarReunion', { lead_id, caller_id: CALLER_ID, fecha_reunion, nota });
+        if (r.success) { showToast('success', 'Reunión agendada', r.message); closeModal('modalReunion'); await cargarTodo(); if (currentSection === 'mis-leads') renderTablaLeads() }
+        else showModalAlert('alertReunion', 'error', r.message || 'Error.');
+      } catch { showModalAlert('alertReunion', 'error', 'Error de conexión.') }
+      finally { setLoading(false) }
+    }
+
+    // ── Modals ───────────────────────────────────────────────────
+    function openModal(id) { document.getElementById(id).classList.add('open') }
+    function closeModal(id) { document.getElementById(id).classList.remove('open') }
+    document.querySelectorAll('.modal-backdrop').forEach(b => { b.addEventListener('click', function (e) { if (e.target === this) this.classList.remove('open') }) });
+
+    // ── Init ─────────────────────────────────────────────────────
+    cargarTodo().then(() => lucide.createIcons());
+  </script>
+</body>
+
+</html>
