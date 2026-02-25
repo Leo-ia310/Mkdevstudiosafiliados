@@ -435,6 +435,17 @@
               <div class="metric-label">Comisión Estimada</div>
               <div class="metric-value text-accent" id="m_comision">–</div>
             </div>
+            <div class="metric-card" style="border-color:rgba(234,179,8,.3)">
+              <div class="metric-label" style="color:#facc15">⏳ Pend. Validación</div>
+              <div class="metric-value" id="m_pend_val" style="color:#facc15">–</div>
+              <div class="metric-sub">Esperando al admin</div>
+            </div>
+          </div>
+
+          <!-- Banner: leads pendientes de validación -->
+          <div id="banner_pend_val" style="display:none" class="alert alert-warning mb-16">
+            ⏳ <strong>Tienes leads esperando aprobación del Admin</strong> para confirmar el cierre.
+            Aparecen como <b>PENDIENTE VALIDACION</b> en tu lista de leads.
           </div>
 
           <!-- Leads urgentes -->
@@ -541,7 +552,7 @@
   </div><!-- /app-layout -->
 
   <script>
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxaRKV9popG5cEdYrthjuJ_QeJJrQSGa9zIsTxWQWJFHzkQQTryu84yPTDdC_K-Fe9s_w/exec';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzex3L1yDl-9C94NOg3D6bAxtf2cIzM0xmvvT-6P-FeWOaz0KgYv1W4ln4d28-uExOznA/exec';
 
     // ── Session ──────────────────────────────────────────────────
     const SESSION = (function () { try { return JSON.parse(localStorage.getItem('mk_session')) } catch { return null } })();
@@ -643,6 +654,9 @@
       document.getElementById('m_tasa_contacto').textContent = (m.tasa_contacto !== undefined ? m.tasa_contacto + '%' : '–');
       document.getElementById('m_tasa_cierre').textContent = (m.tasa_cierre !== undefined ? m.tasa_cierre + '%' : '–');
       document.getElementById('m_comision').textContent = m.comision_estimada !== undefined ? formatMoney(m.comision_estimada) : '–';
+      const pendVal = m.pendiente_validacion ?? 0;
+      document.getElementById('m_pend_val').textContent = pendVal;
+      document.getElementById('banner_pend_val').style.display = pendVal > 0 ? 'flex' : 'none';
       renderLeadsUrgentes();
       const venc = MIS_LEADS.filter(l => esVencido(l) && !['CERRADO_GANADO', 'CERRADO_PERDIDO', 'PENDIENTE_VALIDACION'].includes(l.estado_actual)).length;
       document.getElementById('alertaVencidos').style.display = venc > 0 ? 'flex' : 'none';

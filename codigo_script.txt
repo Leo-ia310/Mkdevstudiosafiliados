@@ -87,6 +87,7 @@ function doPost(e) {
       case 'crearCaller':                 result = crearCaller(body); break;
       case 'registrarResultadoReunion':   result = registrarResultadoReunion(body); break;
       case 'convertirLeadACliente':       result = convertirLeadACliente(body); break;
+      case 'cambiarEstadoLeadAdmin':      result = cambiarEstadoLeadAdmin(body); break;
 
       default: result = { success: false, message: 'Accion POST no reconocida: ' + action };
     }
@@ -251,27 +252,38 @@ function getMetricasCaller(caller_id) {
     h.nota && h.nota.toLowerCase().includes('[llamada]')
   ).length;
 
-  const reuniones_agendadas = leads.filter(l =>
-    ['REUNION_AGENDADA','REUNION_REALIZADA'].includes(l.estado_actual)
-  ).length;
-
-  const reuniones_realizadas = leads.filter(l => l.estado_actual === 'REUNION_REALIZADA').length;
-
   const mesActual = hoy.substring(0, 7); // yyyy-MM
+
+  // ventas: leads que el caller cerró (ya que CERRADO_GANADO viene de PENDIENTE_VALIDACION aprobado por admin)
+  const ESTADOS_CIERRE = ['CERRADO_GANADO', 'PENDIENTE_VALIDACION'];
   const ventas_mes = leads.filter(l =>
-    l.estado_actual === 'CERRADO_GANADO' && l.fecha_actualizacion.substring(0, 7) === mesActual
+    ESTADOS_CIERRE.includes(l.estado_actual) &&
+    l.fecha_actualizacion && l.fecha_actualizacion.substring(0, 7) === mesActual
   ).length;
 
   const contactados = leads.filter(l => l.estado_actual !== 'LEAD_ASIGNADO').length;
   const tasa_contacto = asignados > 0 ? Math.round((contactados / asignados) * 100) : 0;
 
-  const cerrados = leads.filter(l => l.estado_actual === 'CERRADO_GANADO').length;
+  const cerrados = leads.filter(l => ESTADOS_CIERRE.includes(l.estado_actual)).length;
   const tasa_cierre = contactados > 0 ? Math.round((cerrados / contactados) * 100) : 0;
 
   const monto_cerrado = leads
-    .filter(l => l.estado_actual === 'CERRADO_GANADO' && l.monto_cierre)
+    .filter(l => ESTADOS_CIERRE.includes(l.estado_actual) && l.monto_cierre)
     .reduce((s, l) => s + parseFloat(l.monto_cierre || 0), 0);
-  const comision_estimada = monto_cerrado * 0.05; // 5% estimado (ajustable)
+  // Si no tiene monto_cierre aun (pendiente), usar monto_propuesto como estimado
+  const monto_estimado = leads
+    .filter(l => l.estado_actual === 'PENDIENTE_VALIDACION' && !l.monto_cierre && l.monto_propuesto)
+    .reduce((s, l) => s + parseFloat(l.monto_propuesto || 0), 0);
+  const comision_estimada = (monto_cerrado + monto_estimado) * 0.05; // 5% estimado (ajustable)
+
+  // reuniones_agendadas: solo las activas (aún no realizadas)
+  const reuniones_agendadas = leads.filter(l => l.estado_actual === 'REUNION_AGENDADA').length;
+  // reuniones_realizadas: todo lo que pasó de reunión agendada
+  const reuniones_realizadas = leads.filter(l =>
+    ['REUNION_REALIZADA', 'PROPUESTA_ENVIADA', 'NEGOCIACION',
+     'PENDIENTE_VALIDACION', 'CERRADO_GANADO'].includes(l.estado_actual)
+  ).length;
+  const pendiente_validacion = leads.filter(l => l.estado_actual === 'PENDIENTE_VALIDACION').length;
 
   return {
     success: true,
@@ -284,7 +296,8 @@ function getMetricasCaller(caller_id) {
       ventas_mes,
       tasa_contacto,
       tasa_cierre,
-      comision_estimada
+      comision_estimada,
+      pendiente_validacion
     }
   };
 }
@@ -599,7 +612,37 @@ function aprobarCerradoGanado(body) {
   registrarHistorial(lead_id, admin_id || 'admin', 'PENDIENTE_VALIDACION', 'CERRADO_GANADO',
     'Aprobado por admin' + (monto_cierre ? '. Monto cierre: $' + monto_cierre : '.'));
 
-  return { success: true, message: 'Lead aprobado como CERRADO_GANADO.' };
+  // ✔ AUTO-CONVERTIR a cliente si no existe ya
+  var clienteId = null;
+  var clienteMsg = '';
+  const clientesSheet = getSheet('Clientes');
+  const clientesExist = sheetToObjects(clientesSheet);
+  const yaExiste = clientesExist.find(c => String(c.telefono).replace(/\s/g,'') === String(lead.telefono).replace(/\s/g,''));
+  if (!yaExiste) {
+    clienteId = generateId('CLI');
+    clientesSheet.appendRow([
+      clienteId,
+      lead.nombre_negocio,      // nombre
+      lead.telefono,            // telefono
+      lead.email || '',         // email
+      '',                       // pais
+      lead.asignado_a,          // afiliado_id = caller_id (para comisiones)
+      'activo',                 // estado_pipeline
+      dateStr(new Date())       // fecha_registro
+    ]);
+    clienteMsg = ' Cliente creado automáticamente (ID: ' + clienteId + ').';
+    registrarHistorial(lead_id, admin_id || 'admin', 'CERRADO_GANADO', 'CERRADO_GANADO',
+      '[CONVERTIDO] Lead convertido a cliente automáticamente. Cliente ID: ' + clienteId);
+  } else {
+    clienteId = yaExiste.id;
+    clienteMsg = ' El cliente ya existe (ID: ' + clienteId + ').';
+  }
+
+  return {
+    success: true,
+    message: 'Lead aprobado como CERRADO_GANADO.' + clienteMsg,
+    cliente_id: clienteId
+  };
 }
 
 // ============================================================
@@ -739,7 +782,81 @@ function convertirLeadACliente(body) {
 }
 
 // ============================================================
+//  POST — Cambiar Estado Lead directamente (ADMIN)
+//  El admin puede cambiar a cualquier estado sin restricciones
+// ============================================================
+function cambiarEstadoLeadAdmin(body) {
+  const { lead_id, admin_id, nuevo_estado, nota, monto_cierre } = body;
+  if (!lead_id || !nuevo_estado)
+    return { success: false, message: 'lead_id y nuevo_estado son requeridos.' };
+  if (!PIPELINE_ESTADOS.includes(nuevo_estado))
+    return { success: false, message: 'Estado no válido: ' + nuevo_estado };
+
+  const sheet = getSheet('Leads');
+  const leads = sheetToObjects(sheet);
+  const lead = leads.find(l => l.id === lead_id);
+  if (!lead) return { success: false, message: 'Lead no encontrado.' };
+
+  const rowNum = findRowById(sheet, lead_id);
+  const estadoAnterior = lead.estado_actual;
+
+  // Actualizar estado
+  const colEstado = getColIndex(sheet, 'estado_actual');
+  sheet.getRange(rowNum, colEstado + 1).setValue(nuevo_estado);
+
+  // Si CERRADO_GANADO y se pasa monto_cierre, guardarlo
+  if (nuevo_estado === 'CERRADO_GANADO' && monto_cierre) {
+    const colMonto = getColIndex(sheet, 'monto_cierre');
+    if (colMonto !== -1) sheet.getRange(rowNum, colMonto + 1).setValue(parseFloat(monto_cierre));
+  }
+
+  // Actualizar fecha_actualizacion
+  const colFechaAct = getColIndex(sheet, 'fecha_actualizacion');
+  if (colFechaAct !== -1) sheet.getRange(rowNum, colFechaAct + 1).setValue(nowStr());
+
+  const notaHistorial = nota
+    ? '[ADMIN] ' + nota
+    : '[ADMIN] Cambio de estado directo a ' + nuevo_estado;
+  registrarHistorial(lead_id, admin_id || 'admin', estadoAnterior, nuevo_estado, notaHistorial);
+
+  // ✔ Si se cierra como CERRADO_GANADO, auto-convertir a cliente
+  var clienteId = null;
+  var clienteMsg = '';
+  if (nuevo_estado === 'CERRADO_GANADO') {
+    const clientesSheet = getSheet('Clientes');
+    const clientesExist = sheetToObjects(clientesSheet);
+    const yaExiste = clientesExist.find(c => String(c.telefono).replace(/\s/g,'') === String(lead.telefono).replace(/\s/g,''));
+    if (!yaExiste) {
+      clienteId = generateId('CLI');
+      clientesSheet.appendRow([
+        clienteId,
+        lead.nombre_negocio,
+        lead.telefono,
+        lead.email || '',
+        '',
+        lead.asignado_a,   // caller como afiliado para comisiones
+        'activo',
+        dateStr(new Date())
+      ]);
+      clienteMsg = ' Cliente creado automáticamente.';
+      registrarHistorial(lead_id, admin_id || 'admin', 'CERRADO_GANADO', 'CERRADO_GANADO',
+        '[CONVERTIDO] Lead convertido a cliente. ID: ' + clienteId);
+    } else {
+      clienteId = yaExiste.id;
+      clienteMsg = ' Cliente ya existía.';
+    }
+  }
+
+  return {
+    success: true,
+    message: 'Estado cambiado a ' + nuevo_estado + ' correctamente.' + clienteMsg,
+    cliente_id: clienteId
+  };
+}
+
+// ============================================================
 //  HELPER — Registrar en Lead_Historial
+
 // ============================================================
 function registrarHistorial(lead_id, user_id, estado_anterior, estado_nuevo, nota) {
   const sheet = getSheet('Lead_Historial');
@@ -775,9 +892,17 @@ function crearCliente(body) {
 }
 
 function crearProyecto(body) {
-  const { cliente_id, afiliado_id, tipo_servicio, precio_total, fecha_inicio, fecha_entrega, descripcion } = body;
+  const { cliente_id, tipo_servicio, precio_total, fecha_inicio, fecha_entrega, descripcion } = body;
+  let { afiliado_id } = body;
   if (!cliente_id || !tipo_servicio)
     return { success: false, message: 'cliente_id y tipo_servicio son requeridos.' };
+
+  // ✔ Si no viene afiliado_id, leerlo del cliente (para no perder la comisión del caller)
+  if (!afiliado_id) {
+    const clientes = sheetToObjects(getSheet('Clientes'));
+    const cliente = clientes.find(c => c.id === cliente_id);
+    if (cliente && cliente.afiliado_id) afiliado_id = cliente.afiliado_id;
+  }
 
   const sheet = getSheet('Proyectos');
   const id = generateId('PROY');
@@ -786,7 +911,7 @@ function crearProyecto(body) {
     parseFloat(precio_total) || 0, 'pendiente',
     fecha_inicio || dateStr(new Date()), fecha_entrega || '', descripcion || ''
   ]);
-  return { success: true, message: 'Proyecto enviado como propuesta pendiente de aprobacion.', id };
+  return { success: true, message: 'Proyecto creado correctamente.', id };
 }
 
 function cambiarEstadoProyecto(body) {
