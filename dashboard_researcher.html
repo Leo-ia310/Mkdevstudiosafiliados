@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MK Dev Studio – Panel Lead Researcher</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="config.js"></script>
+</head>
+
+<body>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-box">
+            <div class="spinner"></div>
+            <p id="loadingMsg">Cargando...</p>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- ══════════════════════════════════════════
+       Modal: Crear Lead
+  ═══════════════════════════════════════════ -->
+    <div class="modal-backdrop" id="modalCrearLead">
+        <div class="modal" style="max-width:600px;">
+            <div class="modal-header">
+                <h3>🎯 Crear Nuevo Lead</h3>
+                <button class="modal-close" onclick="closeModal('modalCrearLead')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="alertCrearLead"></div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Empresa / Negocio *</label>
+                        <input type="text" id="cl_negocio" placeholder="Ej: Restaurante El Sol" />
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre del Contacto</label>
+                        <input type="text" id="cl_contacto" placeholder="Ej: Juan García" />
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono *</label>
+                        <input type="tel" id="cl_telefono" placeholder="+1 555 0000" />
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="cl_email" placeholder="contacto@empresa.com" />
+                    </div>
+                    <div class="form-group">
+                        <label>Nicho / Industria</label>
+                        <input type="text" id="cl_nicho" placeholder="Ej: Restaurantes, Salud..." />
+                    </div>
+                    <div class="form-group">
+                        <label>Presupuesto Estimado (USD)</label>
+                        <input type="number" id="cl_presupuesto" placeholder="0.00" min="0" step="0.01" />
+                    </div>
+                    <div class="form-group">
+                        <label>Nivel de Interés</label>
+                        <select id="cl_interes">
+                            <option value="">Seleccionar...</option>
+                            <option value="alto">🔥 Alto</option>
+                            <option value="medio">⚡ Medio</option>
+                            <option value="bajo">❄️ Bajo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Asignar a Caller *</label>
+                        <select id="cl_caller">
+                            <option value="">Cargando callers...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Problema / Necesidad detectada</label>
+                    <textarea id="cl_problema" rows="3"
+                        placeholder="¿Qué problema tiene el cliente? ¿Por qué necesita nuestros servicios?..."
+                        style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px;color:var(--text-primary);outline:none;font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('modalCrearLead')">Cancelar</button>
+                <button class="btn btn-primary" onclick="crearLead()">
+                    <i data-lucide="send" style="width:14px;height:14px;"></i> Enviar Lead
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- ══════════════════════════════════════════
+       APP LAYOUT
+  ═══════════════════════════════════════════ -->
+    <div class="app-layout">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="logo-mark">
+                        <img class="logo" src="logo.jpg" alt="logo">
+                    </div>
+                    <div>
+                        <div class="logo-text">MK Dev Studio</div>
+                        <div class="logo-sub">Lead Researcher</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-user">
+                <div class="avatar" id="sidebarAvatar">R</div>
+                <div class="user-info">
+                    <div class="user-name" id="sidebarNombre">Researcher</div>
+                    <span class="user-role role-afiliado">RESEARCHER</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">Mi Panel</div>
+                <div class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard">
+                    <i data-lucide="layout-dashboard" class="nav-icon"></i> Dashboard
+                </div>
+                <div class="nav-item" onclick="showSection('mis-leads')" id="nav-mis-leads">
+                    <i data-lucide="users" class="nav-icon"></i> Mis Leads
+                    <span id="badge_mis_leads"
+                        style="margin-left:auto;background:rgba(167,139,250,.2);color:#a78bfa;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;display:none;"></span>
+                </div>
+                <div class="nav-item" onclick="showSection('progreso')" id="nav-progreso">
+                    <i data-lucide="bar-chart-2" class="nav-icon"></i> Progreso
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="btn btn-secondary btn-block btn-sm" onclick="cerrarSesion()">
+                    <i data-lucide="log-out" style="width:14px;height:14px;"></i> Cerrar sesión
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+
+            <!-- TOPBAR -->
+            <div class="topbar">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Menú">
+                        <i data-lucide="menu"></i>
+                    </button>
+                    <div class="topbar-title">
+                        <h2 id="topbarTitle">Dashboard</h2>
+                        <p id="topbarSub">Tu resumen de leads generados</p>
+                    </div>
+                </div>
+                <div class="topbar-actions">
+                    <button class="btn btn-primary btn-sm" onclick="abrirModalCrearLead()">
+                        <i data-lucide="plus" style="width:14px;height:14px;"></i> <span>Nuevo Lead</span>
+                    </button>
+                    <button class="btn-icon" onclick="cargarTodo()" title="Actualizar">
+                        <i data-lucide="refresh-cw" style="width:15px;height:15px;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- PAGE CONTENT -->
+            <div class="page-content">
+
+                <!-- ═══ DASHBOARD ═══ -->
+                <div id="section-dashboard" class="section-tabs active">
+
+                    <!-- Bienvenida -->
+                    <div class="card mb-24"
+                        style="background:linear-gradient(135deg,rgba(123,63,228,.12) 0%,rgba(155,108,255,.06) 100%);border-color:var(--border);">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 style="font-size:20px;font-weight:800;margin-bottom:4px;">
+                                    ¡Hola, <span id="welcomeName">Researcher</span>!
+                                </h3>
+                                <p class="text-muted">Aquí tienes un resumen de los leads que has generado.</p>
+                            </div>
+                            <div style="opacity:0.35;">
+                                <i data-lucide="search" style="width:52px;height:52px;"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Banner: Ventas Cerradas -->
+                    <div id="bannerCerrado" class="card mb-24"
+                        style="display:none;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(77,255,155,.12),rgba(77,255,155,.04));border-color:rgba(77,255,155,.3);padding:14px 20px;">
+                        <div style="font-size:28px;flex-shrink:0;">🎉</div>
+                        <div style="flex:1;">
+                            <div id="bannerCerradoTitle" style="font-size:14px;font-weight:700;color:var(--success);">
+                                ¡Tus leads están cerrando ventas!</div>
+                            <div id="bannerCerradoSub" style="font-size:12px;color:var(--text-muted);margin-top:2px;">
+                                Tienes ventas cerradas y comisiones generadas este mes.</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Tu comisión estimada
+                            </div>
+                            <div id="bannerComision" style="font-size:20px;font-weight:800;color:var(--success);">$0
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Grid -->
+                    <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i data-lucide="sun"></i></div>
+                            <div class="stat-label">Leads Hoy</div>
+                            <div class="stat-value" id="stat_dia">0</div>
+                            <div class="stat-sub">Creados hoy</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i data-lucide="calendar"></i></div>
+                            <div class="stat-label">Esta Semana</div>
+                            <div class="stat-value" id="stat_semana">0</div>
+                            <div class="stat-sub">Desde el lunes</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i data-lucide="calendar-range"></i></div>
+                            <div class="stat-label">Este Mes</div>
+                            <div class="stat-value" id="stat_mes">0</div>
+                            <div class="stat-sub">En el mes actual</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i data-lucide="users"></i></div>
+                            <div class="stat-label">Total Leads</div>
+                            <div class="stat-value" id="stat_total">0</div>
+                            <div class="stat-sub">Generados por ti</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i data-lucide="check-circle-2"></i></div>
+                            <div class="stat-label">Cerrados (Total)</div>
+                            <div class="stat-value" id="stat_cerrados">0</div>
+                            <div class="stat-sub">Ventas exitosas</div>
+                        </div>
+                        <div class="stat-card"
+                            style="background:linear-gradient(135deg,rgba(77,255,155,.1),rgba(77,255,155,.04));border-color:rgba(77,255,155,.3);">
+                            <div class="stat-icon"><i data-lucide="coins"></i></div>
+                            <div class="stat-label">Comisión Estimada</div>
+                            <div class="stat-value" id="stat_comision"
+                                style="background:none;-webkit-text-fill-color:var(--success);">$0</div>
+                            <div class="stat-sub" id="stat_comision_pct">Al % de tu contrato</div>
+                        </div>
+                    </div>
+
+                    <!-- Últimos Leads -->
+                    <div class="card mt-24">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-title"><i data-lucide="clock"
+                                        style="width:15px;height:15px;display:inline;vertical-align:middle;margin-right:6px;"></i>Leads
+                                    Recientes</div>
+                                <div class="card-subtitle">Los últimos 8 leads creados por ti</div>
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="showSection('mis-leads')">Ver todos</button>
+                        </div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Empresa</th>
+                                        <th>Caller Asignado</th>
+                                        <th>Estado</th>
+                                        <th>Cierre</th>
+                                        <th>Fecha</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tablaRecientes">
+                                    <tr>
+                                        <td colspan="5" style="text-align:center;padding:30px;color:var(--text-muted);">
+                                            Cargando...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ MIS LEADS ═══ -->
+                <div id="section-mis-leads" class="section-tabs">
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-title">Mis Leads</div>
+                                <div class="card-subtitle" id="misLeadsCount">Cargando...</div>
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="abrirModalCrearLead()">
+                                <i data-lucide="plus" style="width:14px;height:14px;"></i> Nuevo Lead
+                            </button>
+                        </div>
+                        <!-- Filtros -->
+                        <div class="search-bar">
+                            <div class="search-input-wrapper">
+                                <span class="search-icon"><i data-lucide="search"
+                                        style="width:14px;height:14px;"></i></span>
+                                <input type="text" id="searchLeads" placeholder="Buscar empresa, contacto, nicho..."
+                                    oninput="filtrarLeads()" />
+                            </div>
+                            <select id="filterLeadEstado" onchange="filtrarLeads()"
+                                style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:9px 14px;color:var(--text-primary);outline:none;">
+                                <option value="">Todos los estados</option>
+                                <option value="LEAD_ASIGNADO">Lead Asignado</option>
+                                <option value="PRIMER_CONTACTO">Primer Contacto</option>
+                                <option value="INTERESADO">Interesado</option>
+                                <option value="NO_INTERESADO">No Interesado</option>
+                                <option value="REUNION_AGENDADA">Reunión Agendada</option>
+                                <option value="REUNION_REALIZADA">Reunión Realizada</option>
+                                <option value="PROPUESTA_ENVIADA">Propuesta Enviada</option>
+                                <option value="NEGOCIACION">Negociación</option>
+                                <option value="PENDIENTE_VALIDACION">Pend. Validación</option>
+                                <option value="CERRADO_GANADO">✅ Cerrado Ganado</option>
+                                <option value="CERRADO_PERDIDO">Cerrado Perdido</option>
+                            </select>
+                            <select id="filterLeadCierre" onchange="filtrarLeads()"
+                                style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:9px 14px;color:var(--text-primary);outline:none;">
+                                <option value="">Todos</option>
+                                <option value="1">✅ Cerrados</option>
+                                <option value="0">⏳ Abiertos</option>
+                            </select>
+                        </div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Empresa</th>
+                                        <th>Contacto</th>
+                                        <th>Teléfono</th>
+                                        <th>Nicho</th>
+                                        <th>Caller Asignado</th>
+                                        <th>Estado</th>
+                                        <th>Cierre</th>
+                                        <th>Creado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tablaLeads">
+                                    <tr>
+                                        <td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">
+                                            Cargando...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ PROGRESO ═══ -->
+                <div id="section-progreso" class="section-tabs">
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-title">Progreso de Leads</div>
+                                <div class="card-subtitle">Visualización por período y estado</div>
+                            </div>
+                        </div>
+
+                        <!-- Selector de período -->
+                        <div style="display:flex;gap:8px;margin-bottom:16px;">
+                            <button class="btn btn-sm" id="tab_dia" onclick="cambiarPeriodo('dia')"
+                                style="border-radius:20px;background:rgba(123,63,228,.25);color:var(--accent-light);border-color:rgba(123,63,228,.5);">Hoy</button>
+                            <button class="btn btn-secondary btn-sm" id="tab_semana" onclick="cambiarPeriodo('semana')"
+                                style="border-radius:20px;">Esta Semana</button>
+                            <button class="btn btn-secondary btn-sm" id="tab_mes" onclick="cambiarPeriodo('mes')"
+                                style="border-radius:20px;">Este Mes</button>
+                            <button class="btn btn-secondary btn-sm" id="tab_total" onclick="cambiarPeriodo('total')"
+                                style="border-radius:20px;">Todo</button>
+                        </div>
+
+                        <!-- Resumen período actual -->
+                        <div id="resumenPeriodo" class="stats-grid"
+                            style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin-bottom:20px;"></div>
+
+                        <!-- Distribución por estado -->
+                        <div class="card-title mb-16"
+                            style="font-size:13px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;">
+                            Distribución por Estado</div>
+                        <div id="distribucionEstados"
+                            style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /page-content -->
+        </div><!-- /main-content -->
+    </div><!-- /app-layout -->
+
+    <script>
+        const APPS_SCRIPT_URL = CONFIG.APPS_SCRIPT_URL;
+
+        // ── Session ──────────────────────────────────────────────────
+        const SESSION = (function () {
+            try { return JSON.parse(localStorage.getItem('mk_session')); } catch { return null; }
+        })();
+
+        if (!SESSION || SESSION.user_rol !== 'lead_researcher') {
+            window.location.href = 'index.html';
+        }
+
+        const RESEARCHER_ID = SESSION.user_id;
+
+        document.getElementById('sidebarNombre').textContent = SESSION.user_nombre || 'Researcher';
+        document.getElementById('sidebarAvatar').textContent = (SESSION.user_nombre || 'R')[0].toUpperCase();
+        document.getElementById('welcomeName').textContent = SESSION.user_nombre || 'Researcher';
+
+        // ── State ────────────────────────────────────────────────────
+        let MIS_LEADS = [];
+        let ALL_CALLERS = [];
+        let METRICAS = {};
+        let periodoActual = 'dia';
+
+        // ── Sidebar toggle ───────────────────────────────────────────
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('open');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('open');
+        }
+        function cerrarSesion() {
+            localStorage.removeItem('mk_session');
+            window.location.href = 'index.html';
+        }
+
+        // ── Toast / Loading ──────────────────────────────────────────
+        function showToast(type, title, msg, duration = 5000) {
+            const container = document.getElementById('toastContainer');
+            const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `
+        <span class="toast-icon">${icons[type] || 'ℹ️'}</span>
+        <div class="toast-body">
+          <div class="toast-title">${title}</div>
+          ${msg ? `<div class="toast-msg">${msg}</div>` : ''}
+        </div>
+        <span class="toast-close" onclick="this.parentElement.remove()">✕</span>`;
+            container.appendChild(toast);
+            if (duration > 0) setTimeout(() => toast.remove(), duration);
+        }
+
+        function setLoading(show, msg = 'Cargando...') {
+            document.getElementById('loadingMsg').textContent = msg;
+            document.getElementById('loadingOverlay').classList.toggle('show', show);
+        }
+
+        function showModalAlert(id, type, msg) {
+            document.getElementById(id).innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+        }
+
+        // ── API ──────────────────────────────────────────────────────
+        async function apiGet(params) {
+            const url = `${APPS_SCRIPT_URL}?${new URLSearchParams(params)}`;
+            return (await fetch(url)).json();
+        }
+        async function apiPost(action, body) {
+            const res = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({ action, ...body })
+            });
+            return res.json();
+        }
+
+        // ── Navigation ───────────────────────────────────────────────
+        const SECTION_META = {
+            'dashboard': { title: 'Dashboard', sub: 'Tu resumen de leads generados' },
+            'mis-leads': { title: 'Mis Leads', sub: 'Todos los leads que has creado' },
+            'progreso': { title: 'Progreso', sub: 'Seguimiento por día, semana y mes' }
+        };
+        function showSection(name) {
+            document.querySelectorAll('.section-tabs').forEach(s => s.classList.remove('active'));
+            document.getElementById(`section-${name}`).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(`nav-${name}`).classList.add('active');
+            const m = SECTION_META[name] || {};
+            document.getElementById('topbarTitle').textContent = m.title || name;
+            document.getElementById('topbarSub').textContent = m.sub || '';
+            closeSidebar();
+            if (name === 'mis-leads') renderTablaLeads();
+            if (name === 'progreso') renderProgreso();
+        }
+
+        // ── Load All ─────────────────────────────────────────────────
+        async function cargarTodo() {
+            setLoading(true, 'Cargando tus datos...');
+            try {
+                const [resLeads, resMetricas, resCallers] = await Promise.all([
+                    apiGet({ action: 'getLeadsByResearcher', researcher_id: RESEARCHER_ID }),
+                    apiGet({ action: 'getMetricasResearcher', researcher_id: RESEARCHER_ID }),
+                    apiGet({ action: 'getCallers' })
+                ]);
+                MIS_LEADS = (resLeads.data || []).sort((a, b) => (b.fecha_creacion || '').localeCompare(a.fecha_creacion || ''));
+                METRICAS = resMetricas.data || {};
+                ALL_CALLERS = resCallers.data || [];
+                renderDashboard();
+                // Badge en sidebar
+                const badge = document.getElementById('badge_mis_leads');
+                badge.textContent = MIS_LEADS.length;
+                badge.style.display = MIS_LEADS.length > 0 ? 'inline' : 'none';
+            } catch (err) {
+                showToast('error', 'Error de conexión', 'No se pudo cargar los datos.');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // ── Helpers ──────────────────────────────────────────────────
+        function formatMoney(v) {
+            return '$' + (parseFloat(v) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        function formatDate(str) {
+            if (!str) return '—';
+            return str.substring(0, 10);
+        }
+        function escapeHtml(str) {
+            return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // ── Render Dashboard ─────────────────────────────────────────
+        function renderDashboard() {
+            const m = METRICAS;
+            document.getElementById('stat_dia').textContent = m.contactos_dia ?? 0;
+            document.getElementById('stat_semana').textContent = m.contactos_semana ?? 0;
+            document.getElementById('stat_mes').textContent = m.contactos_mes ?? 0;
+            document.getElementById('stat_total').textContent = m.total_leads ?? 0;
+            document.getElementById('stat_cerrados').textContent = m.cerrados_total ?? 0;
+            document.getElementById('stat_comision').textContent = formatMoney(m.comision_estimada ?? 0);
+            document.getElementById('stat_comision_pct').textContent = `Al ${m.porcentaje ?? 5}% de comisión`;
+
+
+            // Banner de ventas cerradas
+            const banner = document.getElementById('bannerCerrado');
+            const cerradosMes = m.cerrados_mes ?? 0;
+            if (cerradosMes > 0) {
+                banner.style.display = 'flex';
+                document.getElementById('bannerCerradoTitle').textContent =
+                    `¡${cerradosMes} venta${cerradosMes > 1 ? 's' : ''} cerrada${cerradosMes > 1 ? 's' : ''} este mes!`;
+                document.getElementById('bannerCerradoSub').textContent =
+                    `Un lead que generaste se convirtió en cliente. Tu comisión del ${m.porcentaje ?? 5}% está siendo procesada.`;
+                document.getElementById('bannerComision').textContent = formatMoney(m.comision_estimada ?? 0);
+            } else {
+                banner.style.display = 'none';
+            }
+
+
+            // Recientes
+            renderTablaRecientes();
+        }
+
+        // ── Recientes (últimos 8) ────────────────────────────────────
+        // Map pipeline states to existing styles.css badge classes
+        function getBadgeClass(estado) {
+            const map = {
+                'LEAD_ASIGNADO': 'badge-nuevo',
+                'PRIMER_CONTACTO': 'badge-contactado',
+                'NO_CONTESTO': 'badge-pendiente',
+                'INTERESADO': 'badge-cotizado',
+                'NO_INTERESADO': 'badge-perdido',
+                'REUNION_AGENDADA': 'badge-negociando',
+                'REUNION_REALIZADA': 'badge-en_desarrollo',
+                'PROPUESTA_ENVIADA': 'badge-contactado',
+                'NEGOCIACION': 'badge-negociando',
+                'PENDIENTE_VALIDACION': 'badge-pendiente',
+                'CERRADO_GANADO': 'badge-cerrado',
+                'CERRADO_PERDIDO': 'badge-perdido'
+            };
+            return map[estado] || 'badge-nuevo';
+        }
+
+        function renderTablaRecientes() {
+            const tbody = document.getElementById('tablaRecientes');
+            const recientes = MIS_LEADS.slice(0, 8);
+            if (!recientes.length) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-muted);">Aún no has creado leads.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = recientes.map(l => `
+        <tr>
+          <td><div class="fw-600" style="font-size:13px;">${escapeHtml(l.nombre_negocio)}</div>${l.nicho ? `<div class="text-sm text-muted">${escapeHtml(l.nicho)}</div>` : ''}</td>
+          <td style="font-size:13px;">${escapeHtml(l.caller_nombre || '—')}</td>
+          <td><span class="badge ${getBadgeClass(l.estado_actual)}">${l.estado_actual.replace(/_/g, ' ')}</span></td>
+          <td>${l.cerrado ? `<span class="badge badge-cerrado">✅ Cerrado</span>` : `<span class="badge badge-pendiente">⏳ Abierto</span>`}</td>
+          <td style="font-size:12px;color:var(--text-muted);">${formatDate(l.fecha_creacion)}</td>
+        </tr>`).join('');
+        }
+
+        // ── Tabla Mis Leads ──────────────────────────────────────────
+        function renderTablaLeads() {
+            const q = (document.getElementById('searchLeads')?.value || '').toLowerCase();
+            const estado = document.getElementById('filterLeadEstado')?.value || '';
+            const cierre = document.getElementById('filterLeadCierre')?.value || '';
+
+            let data = MIS_LEADS.filter(l => {
+                const matchQ = !q || l.nombre_negocio.toLowerCase().includes(q) ||
+                    (l.nombre_contacto || '').toLowerCase().includes(q) ||
+                    (l.nicho || '').toLowerCase().includes(q);
+                const matchE = !estado || l.estado_actual === estado;
+                const matchC = cierre === '' || (cierre === '1' ? l.cerrado : !l.cerrado);
+                return matchQ && matchE && matchC;
+            });
+
+            const count = document.getElementById('misLeadsCount');
+            count.textContent = `${data.length} lead${data.length !== 1 ? 's' : ''} encontrado${data.length !== 1 ? 's' : ''}`;
+
+            const tbody = document.getElementById('tablaLeads');
+            if (!data.length) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">Sin resultados.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = data.map(l => `
+        <tr>
+          <td><div class="fw-600" style="font-size:13px;">${escapeHtml(l.nombre_negocio)}</div></td>
+          <td style="font-size:12px;">${escapeHtml(l.nombre_contacto || '—')}</td>
+          <td style="font-size:12px;">${escapeHtml(l.telefono || '—')}</td>
+          <td style="font-size:12px;">${escapeHtml(l.nicho || '—')}</td>
+          <td style="font-size:13px;">${escapeHtml(l.caller_nombre || '—')}</td>
+          <td><span class="badge ${getBadgeClass(l.estado_actual)}" style="font-size:10px;">${l.estado_actual.replace(/_/g, ' ')}</span></td>
+          <td>${l.cerrado ? `<span class="badge badge-cerrado">✅ Cerrado</span>` : `<span class="badge badge-pendiente">⏳ Abierto</span>`}</td>
+          <td style="font-size:12px;color:var(--text-muted);">${formatDate(l.fecha_creacion)}</td>
+        </tr>`).join('');
+        }
+        function filtrarLeads() { renderTablaLeads(); }
+
+        // ── Progreso ─────────────────────────────────────────────────
+        function cambiarPeriodo(p) {
+            periodoActual = p;
+            const activeStyle = 'border-radius:20px;background:rgba(123,63,228,.25);color:var(--accent-light);border-color:rgba(123,63,228,.5);';
+            const inactiveStyle = 'border-radius:20px;';
+            ['dia', 'semana', 'mes', 'total'].forEach(t => {
+                const el = document.getElementById(`tab_${t}`);
+                if (t === p) {
+                    el.className = 'btn btn-sm';
+                    el.style.cssText = activeStyle;
+                } else {
+                    el.className = 'btn btn-secondary btn-sm';
+                    el.style.cssText = inactiveStyle;
+                }
+            });
+            renderProgreso();
+        }
+
+        function getLeadsByPeriodo() {
+            const hoy = new Date().toISOString().substring(0, 10);
+            const now = new Date();
+            const dow = now.getDay();
+            const diffLunes = dow === 0 ? -6 : 1 - dow;
+            const lunes = new Date(now);
+            lunes.setDate(now.getDate() + diffLunes);
+            const semanaInicio = lunes.toISOString().substring(0, 10);
+            const mesActual = hoy.substring(0, 7);
+
+            return MIS_LEADS.filter(l => {
+                const fc = (l.fecha_creacion || '').substring(0, 10);
+                if (periodoActual === 'dia') return fc === hoy;
+                if (periodoActual === 'semana') return fc >= semanaInicio;
+                if (periodoActual === 'mes') return fc.substring(0, 7) === mesActual;
+                return true;
+            });
+        }
+
+        function renderProgreso() {
+            const data = getLeadsByPeriodo();
+            const cerrados = data.filter(l => l.cerrado).length;
+            const abiertos = data.length - cerrados;
+
+            const resumen = document.getElementById('resumenPeriodo');
+            const labels = { dia: 'Hoy', semana: 'Esta Semana', mes: 'Este Mes', total: 'Total' };
+            resumen.innerHTML = `
+        <div class="stat-card">
+          <div class="stat-icon"><i data-lucide="users"></i></div>
+          <div class="stat-label">Leads en ${labels[periodoActual]}</div>
+          <div class="stat-value">${data.length}</div>
+          <div class="stat-sub">Contactos generados</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i data-lucide="check-circle-2"></i></div>
+          <div class="stat-label">Cerrados</div>
+          <div class="stat-value" style="color:#34d399;">${cerrados}</div>
+          <div class="stat-sub">Ventas logradas</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i data-lucide="clock"></i></div>
+          <div class="stat-label">En Proceso</div>
+          <div class="stat-value">${abiertos}</div>
+          <div class="stat-sub">Leads activos</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i data-lucide="percent"></i></div>
+          <div class="stat-label">Tasa de Cierre</div>
+          <div class="stat-value">${data.length > 0 ? Math.round(cerrados / data.length * 100) : 0}%</div>
+          <div class="stat-sub">De tus leads</div>
+        </div>`;
+
+            // Distribución por estado
+            const PIPELINE_ESTADOS = [
+                'LEAD_ASIGNADO', 'PRIMER_CONTACTO', 'NO_CONTESTO', 'INTERESADO', 'NO_INTERESADO',
+                'REUNION_AGENDADA', 'REUNION_REALIZADA', 'PROPUESTA_ENVIADA',
+                'NEGOCIACION', 'PENDIENTE_VALIDACION', 'CERRADO_GANADO', 'CERRADO_PERDIDO'
+            ];
+            const dist = document.getElementById('distribucionEstados');
+            dist.innerHTML = PIPELINE_ESTADOS.map(estado => {
+                const count = data.filter(l => l.estado_actual === estado).length;
+                if (count === 0) return '';
+                const pct = data.length > 0 ? Math.round(count / data.length * 100) : 0;
+                return `
+          <div class="card-sm" style="padding:14px 16px;">
+            <div style="margin-bottom:6px;"><span class="badge ${getBadgeClass(estado)}" style="font-size:10px;">${estado.replace(/_/g, ' ')}</span></div>
+            <div style="font-size:26px;font-weight:800;">${count}</div>
+            <div class="progress-bar mt-8">
+              <div class="progress-fill" style="width:${pct}%;"></div>
+            </div>
+            <div class="text-sm text-muted mt-4">${pct}% del período</div>
+          </div>`;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        // ── Crear Lead Modal ─────────────────────────────────────────
+        function abrirModalCrearLead() {
+            const sel = document.getElementById('cl_caller');
+            sel.innerHTML = ALL_CALLERS.length
+                ? ALL_CALLERS.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join('')
+                : '<option value="">Sin callers activos</option>';
+            ['cl_negocio', 'cl_contacto', 'cl_telefono', 'cl_email', 'cl_nicho', 'cl_presupuesto', 'cl_problema']
+                .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            document.getElementById('cl_interes').value = '';
+            document.getElementById('alertCrearLead').innerHTML = '';
+            openModal('modalCrearLead');
+        }
+
+        async function crearLead() {
+            const nombre_negocio = document.getElementById('cl_negocio').value.trim();
+            const nombre_contacto = document.getElementById('cl_contacto').value.trim();
+            const telefono = document.getElementById('cl_telefono').value.trim();
+            const email = document.getElementById('cl_email').value.trim();
+            const nicho = document.getElementById('cl_nicho').value.trim();
+            const presupuesto_estimado = document.getElementById('cl_presupuesto').value;
+            const nivel_interes = document.getElementById('cl_interes').value;
+            const asignado_a = document.getElementById('cl_caller').value;
+            const problema_detectado = document.getElementById('cl_problema').value.trim();
+
+            if (!nombre_negocio || !telefono || !asignado_a) {
+                showModalAlert('alertCrearLead', 'error', 'Empresa, teléfono y Caller son requeridos.');
+                return;
+            }
+            setLoading(true, 'Enviando lead...');
+            try {
+                const res = await apiPost('crearLeadResearcher', {
+                    researcher_id: RESEARCHER_ID,
+                    asignado_a, nombre_negocio, nombre_contacto,
+                    telefono, email, nicho, presupuesto_estimado,
+                    nivel_interes, problema_detectado
+                });
+                if (res.success) {
+                    showToast('success', '✅ Lead enviado', res.message);
+                    closeModal('modalCrearLead');
+                    await cargarTodo();
+                } else {
+                    showModalAlert('alertCrearLead', 'error', res.message || 'Error al crear lead.');
+                }
+            } catch { showModalAlert('alertCrearLead', 'error', 'Error de conexión.'); }
+            finally { setLoading(false); }
+        }
+
+        // ── Modal helpers ─────────────────────────────────────────────
+        function openModal(id) { document.getElementById(id).classList.add('open'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+        document.querySelectorAll('.modal-backdrop').forEach(b =>
+            b.addEventListener('click', e => { if (e.target === b) b.classList.remove('open'); })
+        );
+
+        // ── Init ──────────────────────────────────────────────────────
+        lucide.createIcons();
+        cargarTodo();
+    </script>
+
+</body>
+
+</html>

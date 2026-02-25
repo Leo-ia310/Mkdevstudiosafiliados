@@ -33,15 +33,19 @@ function doGet(e) {
 
   try {
     switch (action) {
-      case 'getAfiliados':      result = getAfiliados(); break;
-      case 'getClientes':       result = getClientes(); break;
-      case 'getProyectos':      result = getProyectos(); break;
-      case 'getPagos':          result = getPagos(); break;
-      case 'getComisiones':     result = getComisiones(); break;
-      case 'getLeads':          result = getLeads(params.caller_id); break;
-      case 'getLeadHistorial':  result = getLeadHistorial(params.lead_id); break;
-      case 'getMetricasCaller': result = getMetricasCaller(params.caller_id); break;
-      case 'login':             result = login(params.email, params.password); break;
+      case 'getAfiliados':          result = getAfiliados(); break;
+      case 'getClientes':           result = getClientes(); break;
+      case 'getProyectos':          result = getProyectos(); break;
+      case 'getPagos':              result = getPagos(); break;
+      case 'getComisiones':         result = getComisiones(); break;
+      case 'getLeads':              result = getLeads(params.caller_id); break;
+      case 'getLeadHistorial':      result = getLeadHistorial(params.lead_id); break;
+      case 'getMetricasCaller':     result = getMetricasCaller(params.caller_id); break;
+      case 'login':                 result = login(params.email, params.password); break;
+      // --- Módulo LEAD RESEARCHER ---
+      case 'getCallers':            result = getCallers(); break;
+      case 'getLeadsByResearcher':  result = getLeadsByResearcher(params.researcher_id); break;
+      case 'getMetricasResearcher': result = getMetricasResearcher(params.researcher_id); break;
       default: result = { success: false, message: 'Accion GET no reconocida: ' + action };
     }
   } catch (err) {
@@ -88,6 +92,8 @@ function doPost(e) {
       case 'registrarResultadoReunion':   result = registrarResultadoReunion(body); break;
       case 'convertirLeadACliente':       result = convertirLeadACliente(body); break;
       case 'cambiarEstadoLeadAdmin':      result = cambiarEstadoLeadAdmin(body); break;
+      // --- Módulo LEAD RESEARCHER ---
+      case 'crearLeadResearcher':         result = crearLeadResearcher(body); break;
 
       default: result = { success: false, message: 'Accion POST no reconocida: ' + action };
     }
@@ -1036,4 +1042,157 @@ function setupInicial() {
 
   Logger.log('Setup completado.');
   SpreadsheetApp.getUi().alert('✅ Setup completado. Hojas: Usuarios, Clientes, Proyectos, Pagos, Comisiones, Leads, Lead_Historial');
+}
+
+// ============================================================
+//  LEAD RESEARCHER — GET: lista de callers activos
+// ============================================================
+function getCallers() {
+  const usuarios = sheetToObjects(getSheet('Usuarios'));
+  const callers = usuarios
+    .filter(u => u.rol === 'caller' && u.estado === 'activo')
+    .map(u => ({ id: u.id, nombre: u.nombre, email: u.email }));
+  return { success: true, data: callers };
+}
+
+// ============================================================
+//  LEAD RESEARCHER — GET: leads creados por este researcher
+//  ⚠️  NO se devuelve monto_cierre para proteger confidencialidad
+// ============================================================
+function getLeadsByResearcher(researcher_id) {
+  if (!researcher_id) return { success: false, message: 'researcher_id requerido.' };
+
+  const leads = sheetToObjects(getSheet('Leads'))
+    .filter(l => l.creado_por === researcher_id);
+
+  const usuarios = sheetToObjects(getSheet('Usuarios'));
+
+  const result = leads.map(l => {
+    const caller = usuarios.find(u => u.id === l.asignado_a);
+    return {
+      id:              l.id,
+      nombre_negocio:  l.nombre_negocio,
+      nombre_contacto: l.nombre_contacto,
+      telefono:        l.telefono,
+      nicho:           l.nicho,
+      estado_actual:   l.estado_actual,
+      caller_nombre:   caller ? caller.nombre : l.asignado_a,
+      fecha_creacion:  l.fecha_creacion,
+      fecha_actualizacion: l.fecha_actualizacion,
+      cerrado:         ['CERRADO_GANADO'].includes(l.estado_actual)
+      // monto_cierre NO se incluye
+    };
+  });
+
+  return { success: true, data: result };
+}
+
+// ============================================================
+//  LEAD RESEARCHER — GET: métricas (día / semana / mes / comisión)
+//  ⚠️  Comisión estimada: calcula % sobre leads cerrados SIN
+//      revelar el monto exacto; solo retorna monto_comision estimado
+// ============================================================
+function getMetricasResearcher(researcher_id) {
+  if (!researcher_id) return { success: false, message: 'researcher_id requerido.' };
+
+  const hoy = dateStr(new Date());
+  const leads = sheetToObjects(getSheet('Leads'))
+    .filter(l => l.creado_por === researcher_id);
+
+  // Calcular inicio de semana (lunes)
+  const now = new Date();
+  const dow = now.getDay(); // 0=domingo
+  const diffLunes = (dow === 0 ? -6 : 1 - dow);
+  const lunes = new Date(now);
+  lunes.setDate(now.getDate() + diffLunes);
+  const semanaInicio = dateStr(lunes);
+  const mesActual = hoy.substring(0, 7);
+
+  const contactos_dia  = leads.filter(l => l.fecha_creacion && l.fecha_creacion.substring(0, 10) === hoy).length;
+  const contactos_semana = leads.filter(l => l.fecha_creacion && l.fecha_creacion.substring(0, 10) >= semanaInicio).length;
+  const contactos_mes  = leads.filter(l => l.fecha_creacion && l.fecha_creacion.substring(0, 7) === mesActual).length;
+
+  const cerrados = leads.filter(l => l.estado_actual === 'CERRADO_GANADO');
+  const cerrados_con_monto = cerrados.filter(l => l.monto_cierre && parseFloat(l.monto_cierre) > 0);
+
+  // Obtener porcentaje propio del researcher
+  const usuarios = sheetToObjects(getSheet('Usuarios'));
+  const researcher = usuarios.find(u => u.id === researcher_id);
+  const porcentaje = researcher && researcher.porcentaje ? parseFloat(researcher.porcentaje) : 5;
+
+  // Comisión estimada basada en montos cerrados con monto
+  const comision_estimada = cerrados_con_monto.reduce((s, l) => s + parseFloat(l.monto_cierre || 0), 0) * (porcentaje / 100);
+
+  // Leads cerrados este mes para alerta
+  const cerrados_mes = cerrados.filter(l => l.fecha_actualizacion && l.fecha_actualizacion.substring(0, 7) === mesActual).length;
+
+  return {
+    success: true,
+    data: {
+      contactos_dia,
+      contactos_semana,
+      contactos_mes,
+      total_leads: leads.length,
+      cerrados_total: cerrados.length,
+      cerrados_mes,
+      comision_estimada,
+      porcentaje
+    }
+  };
+}
+
+// ============================================================
+//  LEAD RESEARCHER — POST: crear lead asignado a un caller
+// ============================================================
+function crearLeadResearcher(body) {
+  const {
+    researcher_id, asignado_a,
+    nombre_negocio, nombre_contacto, telefono, email,
+    nicho, presupuesto_estimado, nivel_interes, problema_detectado
+  } = body;
+
+  if (!researcher_id) return { success: false, message: 'researcher_id es requerido.' };
+  if (!asignado_a)    return { success: false, message: 'Debes asignar este lead a un Caller.' };
+  if (!nombre_negocio || !telefono)
+    return { success: false, message: 'Nombre de negocio y teléfono son requeridos.' };
+
+  // Verificar que el caller existe y está activo
+  const usuarios = sheetToObjects(getSheet('Usuarios'));
+  const caller = usuarios.find(u => u.id === asignado_a && u.rol === 'caller');
+  if (!caller) return { success: false, message: 'El Caller seleccionado no existe o está inactivo.' };
+
+  const sheet = getSheet('Leads');
+  const id = generateId('LD');
+  const ahora = nowStr();
+
+  sheet.appendRow([
+    id,
+    nombre_negocio,
+    nombre_contacto || '',
+    telefono,
+    email || '',
+    nicho || '',
+    'LEAD_ASIGNADO',          // estado_actual
+    problema_detectado || '',
+    presupuesto_estimado || '',
+    nivel_interes || '',
+    '',                        // monto_propuesto
+    '',                        // monto_cierre
+    '',                        // proxima_accion
+    '',                        // fecha_proxima_accion
+    '',                        // fecha_reunion
+    asignado_a,
+    researcher_id,             // creado_por
+    ahora,                     // fecha_creacion
+    ahora                      // fecha_actualizacion
+  ]);
+
+  registrarHistorial(id, researcher_id, '', 'LEAD_ASIGNADO',
+    '[RESEARCHER] Lead creado y asignado a ' + caller.nombre);
+
+  return {
+    success: true,
+    message: 'Lead creado y asignado a ' + caller.nombre + ' correctamente.',
+    id
+  };
 }
