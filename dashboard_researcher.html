@@ -69,6 +69,14 @@
                         </select>
                     </div>
                     <div class="form-group">
+                        <label>Tipo de Servicio *</label>
+                        <select id="cl_tipo_servicio">
+                            <option value="">Seleccionar...</option>
+                            <option value="paginas_web_software">🌐 Páginas Web / Software</option>
+                            <option value="kaffe">☕ Kaffe</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label>Asignar a Caller *</label>
                         <select id="cl_caller">
                             <option value="">Cargando callers...</option>
@@ -731,6 +739,7 @@
             ['cl_negocio', 'cl_contacto', 'cl_telefono', 'cl_email', 'cl_nicho', 'cl_presupuesto', 'cl_problema']
                 .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             document.getElementById('cl_interes').value = '';
+            document.getElementById('cl_tipo_servicio').value = '';
             document.getElementById('alertCrearLead').innerHTML = '';
             openModal('modalCrearLead');
         }
@@ -743,11 +752,12 @@
             const nicho = document.getElementById('cl_nicho').value.trim();
             const presupuesto_estimado = document.getElementById('cl_presupuesto').value;
             const nivel_interes = document.getElementById('cl_interes').value;
+            const tipo_servicio = document.getElementById('cl_tipo_servicio').value;
             const asignado_a = document.getElementById('cl_caller').value;
             const problema_detectado = document.getElementById('cl_problema').value.trim();
 
-            if (!nombre_negocio || !telefono || !asignado_a) {
-                showModalAlert('alertCrearLead', 'error', 'Empresa, teléfono y Caller son requeridos.');
+            if (!nombre_negocio || !telefono || !asignado_a || !tipo_servicio) {
+                showModalAlert('alertCrearLead', 'error', 'Empresa, teléfono, tipo de servicio y Caller son requeridos.');
                 return;
             }
             setLoading(true, 'Enviando lead...');
@@ -756,7 +766,7 @@
                     researcher_id: RESEARCHER_ID,
                     asignado_a, nombre_negocio, nombre_contacto,
                     telefono, email, nicho, presupuesto_estimado,
-                    nivel_interes, problema_detectado
+                    nivel_interes, tipo_servicio, problema_detectado
                 });
                 if (res.success) {
                     showToast('success', '✅ Lead enviado', res.message);

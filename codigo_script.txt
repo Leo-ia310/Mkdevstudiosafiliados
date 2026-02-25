@@ -133,7 +133,7 @@ function initSheetHeaders(sheet, name) {
       'id','nombre_negocio','nombre_contacto','telefono','email','nicho',
       'estado_actual','problema_detectado','presupuesto_estimado','nivel_interes',
       'monto_propuesto','monto_cierre','proxima_accion','fecha_proxima_accion',
-      'fecha_reunion','asignado_a','creado_por','fecha_creacion','fecha_actualizacion'
+      'fecha_reunion','asignado_a','creado_por','tipo_servicio','fecha_creacion','fecha_actualizacion'
     ],
     'Lead_Historial': ['id','lead_id','user_id','estado_anterior','estado_nuevo','nota','fecha_cambio']
   };
@@ -1029,6 +1029,16 @@ function setupInicial() {
     }
   }
 
+  // Verificar columna tipo_servicio en Leads
+  const shLeads = ss.getSheetByName('Leads');
+  if (shLeads) {
+    const headersLeads = shLeads.getRange(1, 1, 1, shLeads.getLastColumn()).getValues()[0];
+    if (!headersLeads.includes('tipo_servicio')) {
+      shLeads.getRange(1, shLeads.getLastColumn() + 1).setValue('tipo_servicio');
+      Logger.log('Columna "tipo_servicio" agregada a Leads.');
+    }
+  }
+
   // Crear admin por defecto si no existe
   const sheetUsuarios = ss.getSheetByName('Usuarios');
   const data = sheetUsuarios.getDataRange().getValues();
@@ -1076,6 +1086,7 @@ function getLeadsByResearcher(researcher_id) {
       telefono:        l.telefono,
       nicho:           l.nicho,
       estado_actual:   l.estado_actual,
+      tipo_servicio:   l.tipo_servicio || '',
       caller_nombre:   caller ? caller.nombre : l.asignado_a,
       fecha_creacion:  l.fecha_creacion,
       fecha_actualizacion: l.fecha_actualizacion,
@@ -1148,7 +1159,7 @@ function crearLeadResearcher(body) {
   const {
     researcher_id, asignado_a,
     nombre_negocio, nombre_contacto, telefono, email,
-    nicho, presupuesto_estimado, nivel_interes, problema_detectado
+    nicho, presupuesto_estimado, nivel_interes, tipo_servicio, problema_detectado
   } = body;
 
   if (!researcher_id) return { success: false, message: 'researcher_id es requerido.' };
@@ -1183,6 +1194,7 @@ function crearLeadResearcher(body) {
     '',                        // fecha_reunion
     asignado_a,
     researcher_id,             // creado_por
+    tipo_servicio || '',       // tipo_servicio
     ahora,                     // fecha_creacion
     ahora                      // fecha_actualizacion
   ]);
