@@ -106,7 +106,8 @@
       gap: 12px;
       overflow-x: auto;
       padding-bottom: 12px;
-      min-height: 300px
+      min-height: 300px;
+      -webkit-overflow-scrolling: touch
     }
 
     .kanban-col {
@@ -176,9 +177,140 @@
 
     .metrics-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
       gap: 12px;
       margin-bottom: 20px
+    }
+
+    /* ── Responsive caller-specific ── */
+    .caller-select {
+      background: rgba(255, 255, 255, .04);
+      border: 1px solid rgba(255, 255, 255, .05);
+      border-radius: 8px;
+      padding: 9px 14px;
+      color: var(--text-primary);
+      outline: none;
+      font-size: 13px;
+      flex-shrink: 0
+    }
+
+    /* Mobile card view for leads table */
+    .lead-cards {
+      display: none;
+      flex-direction: column;
+      gap: 10px
+    }
+
+    .lead-card {
+      background: rgba(255, 255, 255, .03);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 14px;
+      cursor: pointer
+    }
+
+    .lead-card.vencido-row {
+      border-left: 3px solid #ef4444;
+      background: rgba(239, 68, 68, .04)
+    }
+
+    .lead-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      gap: 8px
+    }
+
+    .lead-card-name {
+      font-weight: 700;
+      font-size: 14px;
+      line-height: 1.3
+    }
+
+    .lead-card-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px
+    }
+
+    .lead-card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+      font-size: 12px;
+      color: var(--text-secondary)
+    }
+
+    .lead-card-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px
+    }
+
+    .lead-card-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 8px
+    }
+
+    .lead-card-actions .btn {
+      flex: 1;
+      min-width: 0
+    }
+
+    @media (max-width: 640px) {
+      .metrics-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px
+      }
+
+      .metric-card {
+        padding: 12px 10px
+      }
+
+      .metric-value {
+        font-size: 20px
+      }
+
+      .metric-label {
+        font-size: 10px
+      }
+
+      /* Hide table, show cards */
+      .table-wrapper.leads-table-wrapper {
+        display: none
+      }
+
+      .lead-cards {
+        display: flex
+      }
+
+      /* Urgentes table stays compact but scrollable */
+      .urgentes-table .table-wrapper {
+        font-size: 11px
+      }
+
+      .caller-select {
+        width: 100%
+      }
+
+      /* Welcome card icon hidden on mobile */
+      .welcome-icon {
+        display: none !important
+      }
+
+      .kanban-col {
+        min-width: 170px
+      }
+    }
+
+    @media (max-width: 400px) {
+      .metrics-grid {
+        grid-template-columns: 1fr 1fr
+      }
     }
   </style>
 </head>
@@ -318,6 +450,9 @@
     </div>
   </div>
 
+  <!-- Sidebar Overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
   <!-- APP LAYOUT -->
   <div class="app-layout">
     <aside class="sidebar" id="sidebar">
@@ -361,6 +496,9 @@
 
     <div class="main-content">
       <div class="topbar">
+        <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Menú">
+          <i data-lucide="menu"></i>
+        </button>
         <div class="topbar-title">
           <h2 id="topbarTitle">Dashboard</h2>
           <p id="topbarSub">Tu resumen personal de actividad</p>
@@ -385,7 +523,8 @@
                     id="welcomeName">Caller</span>!</h3>
                 <p class="text-muted">Tu módulo de gestión de leads y seguimiento.</p>
               </div>
-              <div style="opacity:.3"><i data-lucide="phone-call" style="width:52px;height:52px"></i></div>
+              <div style="opacity:.3" class="welcome-icon"><i data-lucide="phone-call"
+                  style="width:52px;height:52px"></i></div>
             </div>
           </div>
 
@@ -484,8 +623,7 @@
                 <input type="text" id="searchLeads" placeholder="Buscar por nombre, negocio, teléfono..."
                   oninput="filtrarLeads()" />
               </div>
-              <select id="filterEstadoLead" onchange="filtrarLeads()"
-                style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:9px 14px;color:var(--text-primary);outline:none">
+              <select id="filterEstadoLead" onchange="filtrarLeads()" class="caller-select">
                 <option value="">Todos los estados</option>
                 <option value="LEAD_ASIGNADO">Lead Asignado</option>
                 <option value="PRIMER_CONTACTO">Primer Contacto</option>
@@ -500,14 +638,13 @@
                 <option value="CERRADO_GANADO">Cerrado Ganado</option>
                 <option value="CERRADO_PERDIDO">Cerrado Perdido</option>
               </select>
-              <select id="filterVencidos" onchange="filtrarLeads()"
-                style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:9px 14px;color:var(--text-primary);outline:none">
+              <select id="filterVencidos" onchange="filtrarLeads()" class="caller-select">
                 <option value="">Todos</option>
                 <option value="vencidos">Solo vencidos 🔴</option>
                 <option value="hoy">Seguimiento hoy</option>
               </select>
             </div>
-            <div class="table-wrapper">
+            <div class="table-wrapper leads-table-wrapper">
               <table>
                 <thead>
                   <tr>
@@ -528,6 +665,8 @@
                 </tbody>
               </table>
             </div>
+            <!-- Mobile card view (shown only on small screens via CSS) -->
+            <div class="lead-cards" id="leadCards"></div>
           </div>
         </div>
 
@@ -702,28 +841,67 @@
         const mv = !venc || (venc === 'vencidos' && esVencido(l)) || (venc === 'hoy' && esHoy(l));
         return ms && me && mv;
       });
+
+      // Desktop table
       const tbody = document.getElementById('tablaLeads');
-      if (data.length === 0) { tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state" style="padding:30px 0"><div class="empty-icon">📋</div><p>No se encontraron leads</p></div></td></tr>`; return }
-      tbody.innerHTML = data.map(l => {
-        const vencido = esVencido(l) && !['CERRADO_GANADO', 'CERRADO_PERDIDO', 'PENDIENTE_VALIDACION'].includes(l.estado_actual);
-        const cerrado = ['CERRADO_GANADO', 'CERRADO_PERDIDO', 'PENDIENTE_VALIDACION'].includes(l.estado_actual);
-        return `<tr class="${vencido ? 'vencido-row' : ''}">
-      <td><div class="fw-600">${escHtml(l.nombre_negocio)}${vencido ? '<span class="vencido-badge">VENCIDO</span>' : ''}</div><div class="text-sm text-muted">${escHtml(l.nombre_contacto)}</div></td>
-      <td>${escHtml(l.telefono || '–')}</td>
-      <td><span class="text-sm">${escHtml(l.nicho || '–')}</span></td>
-      <td><span class="badge badge-${l.estado_actual}" style="font-size:10px">${l.estado_actual.replace(/_/g, ' ')}</span></td>
-      <td><span class="nivel-star">${estrellas(l.nivel_interes)}</span></td>
-      <td style="max-width:160px;font-size:12px">${escHtml(l.proxima_accion || '–')}</td>
-      <td style="font-size:12px;${vencido ? 'color:#f87171;font-weight:700' : ''}">${formatDate(l.fecha_proxima_accion)}</td>
-      <td><div style="display:flex;gap:5px;flex-wrap:wrap">
-        <button class="btn btn-secondary btn-sm" onclick="verLead('${l.id}')">👁</button>
-        ${!cerrado ? `<button class="btn btn-secondary btn-sm" onclick="abrirNota('${l.id}')">📝</button>` : ''}
-        ${!cerrado ? `<button class="btn btn-primary btn-sm" onclick="abrirEstado('${l.id}','${l.estado_actual}')">🔄</button>` : ''}
-        ${!cerrado ? `<button class="btn btn-success btn-sm" onclick="marcarLlamada('${l.id}')" title="Marcar llamada realizada">📞</button>` : ''}
-        ${!cerrado && l.estado_actual !== 'REUNION_AGENDADA' ? `<button class="btn btn-secondary btn-sm" onclick="abrirReunion('${l.id}')" title="Agendar reunión">📅</button>` : ''}
-      </div></td>
-    </tr>`;
-      }).join('');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state" style="padding:30px 0"><div class="empty-icon">📋</div><p>No se encontraron leads</p></div></td></tr>`;
+      } else {
+        tbody.innerHTML = data.map(l => {
+          const vencido = esVencido(l) && !['CERRADO_GANADO', 'CERRADO_PERDIDO', 'PENDIENTE_VALIDACION'].includes(l.estado_actual);
+          const cerrado = ['CERRADO_GANADO', 'CERRADO_PERDIDO', 'PENDIENTE_VALIDACION'].includes(l.estado_actual);
+          return `<tr class="${vencido ? 'vencido-row' : ''}">
+        <td><div class="fw-600">${escHtml(l.nombre_negocio)}${vencido ? '<span class="vencido-badge">VENCIDO</span>' : ''}</div><div class="text-sm text-muted">${escHtml(l.nombre_contacto)}</div></td>
+        <td>${escHtml(l.telefono || '–')}</td>
+        <td><span class="text-sm">${escHtml(l.nicho || '–')}</span></td>
+        <td><span class="badge badge-${l.estado_actual}" style="font-size:10px">${l.estado_actual.replace(/_/g, ' ')}</span></td>
+        <td><span class="nivel-star">${estrellas(l.nivel_interes)}</span></td>
+        <td style="max-width:160px;font-size:12px">${escHtml(l.proxima_accion || '–')}</td>
+        <td style="font-size:12px;${vencido ? 'color:#f87171;font-weight:700' : ''}">${formatDate(l.fecha_proxima_accion)}</td>
+        <td><div style="display:flex;gap:5px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="verLead('${l.id}')">👁</button>
+          ${!cerrado ? `<button class="btn btn-secondary btn-sm" onclick="abrirNota('${l.id}')">📝</button>` : ''}
+          ${!cerrado ? `<button class="btn btn-primary btn-sm" onclick="abrirEstado('${l.id}','${l.estado_actual}')">🔄</button>` : ''}
+          ${!cerrado ? `<button class="btn btn-success btn-sm" onclick="marcarLlamada('${l.id}')" title="Marcar llamada realizada">📞</button>` : ''}
+          ${!cerrado && l.estado_actual !== 'REUNION_AGENDADA' ? `<button class="btn btn-secondary btn-sm" onclick="abrirReunion('${l.id}')" title="Agendar reunión">📅</button>` : ''}
+        </div></td>
+      </tr>`;
+        }).join('');
+      }
+
+      // Mobile cards view
+      const cardsContainer = document.getElementById('leadCards');
+      if (data.length === 0) {
+        cardsContainer.innerHTML = `<div class="empty-state" style="padding:30px 0"><div class="empty-icon">📋</div><p>No se encontraron leads</p></div>`;
+      } else {
+        cardsContainer.innerHTML = data.map(l => {
+          const vencido = esVencido(l) && !['CERRADO_GANADO', 'CERRADO_PERDIDO', 'PENDIENTE_VALIDACION'].includes(l.estado_actual);
+          const cerrado = ['CERRADO_GANADO', 'CERRADO_PERDIDO', 'PENDIENTE_VALIDACION'].includes(l.estado_actual);
+          return `<div class="lead-card ${vencido ? 'vencido-row' : ''}">
+          <div class="lead-card-header">
+            <div>
+              <div class="lead-card-name">${escHtml(l.nombre_negocio)}${vencido ? '<span class="vencido-badge">VENCIDO</span>' : ''}</div>
+              <div class="lead-card-sub">${escHtml(l.nombre_contacto || '–')}</div>
+            </div>
+            <span class="badge badge-${l.estado_actual}" style="font-size:9px;white-space:nowrap;flex-shrink:0">${l.estado_actual.replace(/_/g, ' ')}</span>
+          </div>
+          <div class="lead-card-meta">
+            <span>📞 ${escHtml(l.telefono || '–')}</span>
+            <span>🏷️ ${escHtml(l.nicho || '–')}</span>
+            <span class="nivel-star">${estrellas(l.nivel_interes)}</span>
+            ${l.fecha_proxima_accion ? `<span style="${vencido ? 'color:#f87171;font-weight:700' : ''}">📅 ${formatDate(l.fecha_proxima_accion)}</span>` : ''}
+          </div>
+          ${l.proxima_accion ? `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">➡️ ${escHtml(l.proxima_accion)}</div>` : ''}
+          ${!cerrado ? `<div class="lead-card-actions">
+            <button class="btn btn-secondary btn-sm" onclick="verLead('${l.id}')">👁 Ver</button>
+            <button class="btn btn-secondary btn-sm" onclick="abrirNota('${l.id}')">📝 Nota</button>
+            <button class="btn btn-primary btn-sm" onclick="abrirEstado('${l.id}','${l.estado_actual}')">🔄 Estado</button>
+            <button class="btn btn-success btn-sm" onclick="marcarLlamada('${l.id}')">📞</button>
+            ${l.estado_actual !== 'REUNION_AGENDADA' ? `<button class="btn btn-secondary btn-sm" onclick="abrirReunion('${l.id}')">📅</button>` : ''}
+          </div>` : `<div class="lead-card-actions"><button class="btn btn-secondary btn-sm" onclick="verLead('${l.id}')">👁 Ver detalle</button></div>`}
+        </div>`;
+        }).join('');
+      }
     }
 
     // ── Kanban ───────────────────────────────────────────────────
@@ -900,6 +1078,22 @@
     function openModal(id) { document.getElementById(id).classList.add('open') }
     function closeModal(id) { document.getElementById(id).classList.remove('open') }
     document.querySelectorAll('.modal-backdrop').forEach(b => { b.addEventListener('click', function (e) { if (e.target === this) this.classList.remove('open') }) });
+
+    // ── Sidebar Mobile ───────────────────────────────────────────
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('open');
+    }
+    function closeSidebar() {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebarOverlay').classList.remove('open');
+    }
+    // Close sidebar when a nav item is clicked (mobile)
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => { if (window.innerWidth <= 900) closeSidebar(); });
+    });
 
     // ── Init ─────────────────────────────────────────────────────
     cargarTodo().then(() => lucide.createIcons());
