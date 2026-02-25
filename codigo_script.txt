@@ -274,7 +274,11 @@ function getMetricasCaller(caller_id) {
   const monto_estimado = leads
     .filter(l => l.estado_actual === 'PENDIENTE_VALIDACION' && !l.monto_cierre && l.monto_propuesto)
     .reduce((s, l) => s + parseFloat(l.monto_propuesto || 0), 0);
-  const comision_estimada = (monto_cerrado + monto_estimado) * 0.05; // 5% estimado (ajustable)
+
+  const usuarios = sheetToObjects(getSheet('Usuarios'));
+  const caller = usuarios.find(u => u.id === caller_id);
+  const porcentaje = caller && caller.porcentaje ? parseFloat(caller.porcentaje) : 30;
+  const comision_estimada = (monto_cerrado + monto_estimado) * (porcentaje / 100);
 
   // reuniones_agendadas: solo las activas (aún no realizadas)
   const reuniones_agendadas = leads.filter(l => l.estado_actual === 'REUNION_AGENDADA').length;

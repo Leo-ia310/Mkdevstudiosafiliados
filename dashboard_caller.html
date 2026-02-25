@@ -7,6 +7,7 @@
   <title>MK Dev Studio – Panel Caller</title>
   <link rel="stylesheet" href="styles.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="config.js"></script>
   <style>
     .badge-LEAD_ASIGNADO {
       background: rgba(100, 100, 255, .15);
@@ -552,7 +553,7 @@
   </div><!-- /app-layout -->
 
   <script>
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzex3L1yDl-9C94NOg3D6bAxtf2cIzM0xmvvT-6P-FeWOaz0KgYv1W4ln4d28-uExOznA/exec';
+    const APPS_SCRIPT_URL = CONFIG.APPS_SCRIPT_URL;
 
     // ── Session ──────────────────────────────────────────────────
     const SESSION = (function () { try { return JSON.parse(localStorage.getItem('mk_session')) } catch { return null } })();
